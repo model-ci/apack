@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 32 32">
+  <defs>
+    <linearGradient id="gradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#FF6B35;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#FF8C42;stop-opacity:1" />
+    </linearGradient>
+  </defs>
+  
+  <!-- Background circle -->
+  <circle cx="16" cy="16" r="14" fill="url(#gradient)" stroke="#FFFFFF" stroke-width="1"/>
+  
+  <!-- Letter A -->
+  <path d="M 10 24 L 12 18 L 16 8 L 20 18 L 22 24 M 13 20 L 19 20" 
+        fill="none" 
+        stroke="white" 
+        stroke-width="2.5" 
+        stroke-linecap="round" 
+        stroke-linejoin="round"/>
+  
+  <!-- Small package icon -->
+  <rect x="18" y="10" width="6" height="4" fill="white" opacity="0.8" rx="0.5"/>
+  <line x1="19" y1="12" x2="23" y2="12" stroke="#D2691E" stroke-width="0.8"/>
+  <line x1="21" y1="10" x2="21" y2="14" stroke="#D2691E" stroke-width="0.8"/>
+</svg>
