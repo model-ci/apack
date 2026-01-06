@@ -52,7 +52,7 @@ apack starts from trained model files, analyzes and generates a declarative desc
 ### System Requirements
 
 #### Local Environment
-https://github.com/user-attachments/assets/6b9b5daf-9385-4226-9619-2a8d02edede6
+https://github.com/user-attachments/assets/b38d1172-93ae-428f-b2cc-332139adc95e
 
 | Component | Minimum Requirements | Recommended Configuration |
 |-----------|----------------------|---------------------------|
@@ -62,7 +62,7 @@ https://github.com/user-attachments/assets/6b9b5daf-9385-4226-9619-2a8d02edede6
 | Network | Stable internet connection | Bandwidth ≥ 10Mbps |
 
 #### Cloud Environment
-https://github.com/user-attachments/assets/39017bc7-909a-4e29-b58a-e77360f3b226
+https://github.com/user-attachments/assets/28b6da6c-37ab-4173-9e82-752abccb1a7f
 
 | Component | Minimum Requirements | Recommended Configuration |
 |-----------|----------------------|---------------------------|
