@@ -65,6 +65,18 @@ type ModelSpec struct {
 	Config     modelspec.ModelConfig     `json:"config,omitempty"`
 }
 
+func New(p Package, s ModelSpec) *Artifact {
+	return &Artifact{
+		OCIVersion: OCIVersion,
+		Package: p,
+		Spec:    s,
+	}
+}
+
+func NewModelSpec() ModelSpec {
+	return ModelSpec{}
+}
+
 func (a *Artifact) MarshalToYAML() ([]byte, error) {
 	return yaml.Marshal(a)
 }

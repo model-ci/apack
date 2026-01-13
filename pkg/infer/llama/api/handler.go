@@ -232,27 +232,27 @@ func (h *Handler) HandlePresets(w http.ResponseWriter, r *http.Request) {
 
 func (h *Handler) getPresets(w http.ResponseWriter, r *http.Request) {
 	presets := []map[string]interface{}{
-{
-    "id":          "creative",
-    "name":        "Creative Writing",
-    "temperature": 0.9,
-    "max_tokens":  1000,
-    "description": "Suitable for creative writing and brainstorming",
-},
-{
-    "id":          "precise",
-    "name":        "Precise Answer",
-    "temperature": 0.1,
-    "max_tokens":  500,
-    "description": "Suitable for Q&A requiring accurate information",
-},
-{
-    "id":          "balanced",
-    "name":        "Balanced Mode",
-    "temperature": 0.7,
-    "max_tokens":  512,
-    "description": "Balances creativity and accuracy",
-},
+		{
+			"id":          "creative",
+			"name":        "Creative Writing",
+			"temperature": 0.9,
+			"max_tokens":  1000,
+			"description": "Suitable for creative writing and brainstorming",
+		},
+		{
+			"id":          "precise",
+			"name":        "Precise Answer",
+			"temperature": 0.1,
+			"max_tokens":  500,
+			"description": "Suitable for Q&A requiring accurate information",
+		},
+		{
+			"id":          "balanced",
+			"name":        "Balanced Mode",
+			"temperature": 0.7,
+			"max_tokens":  512,
+			"description": "Balances creativity and accuracy",
+		},
 	}
 
 	w.Header().Set("Content-Type", "application/json")

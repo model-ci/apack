@@ -23,6 +23,10 @@ const (
 	FileTypeUnknown
 )
 
+const (
+	OCIVersion = "1.0.1"	
+)
+
 var weightsSuffixes = []string{
 	".safetensors", ".pkl", ".joblib",
 	".bin", ".pth", ".pt", ".mar", ".pt2", ".ptl",
@@ -60,7 +64,7 @@ func IsDefaultArtifactName(filename string) bool {
 func Gen(dir *Directory, a *Artifact) (*Artifact, error) {
 	log.Logger.Infof("Generating apackfile in %s", dir.Path)
 	artifact := &Artifact{
-		OCIVersion: "1.0.1",
+		OCIVersion: OCIVersion,
 		Package:    a.Package,
 		Spec:       a.Spec,
 	}

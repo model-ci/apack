@@ -3,9 +3,7 @@
 
 package distribution
 
-import (
-	"io/fs"
-)
+import "io/fs"
 
 func (fm *FileMetadata) Fill(info fs.FileInfo) error {
 	var typeflag byte
@@ -18,12 +16,12 @@ func (fm *FileMetadata) Fill(info fs.FileInfo) error {
 		typeflag = '?'
 	}
 
-	fm.Name = info.Name()
-	fm.Mode = uint32(info.Mode().Perm())
+	fm.FileMetadata.Name = info.Name()
+	fm.FileMetadata.Mode = uint32(info.Mode().Perm())
 	fm.Uid = 0
 	fm.Gid = 0
-	fm.Size = info.Size()
-	fm.ModTime = info.ModTime()
+	fm.FileMetadata.Size = info.Size()
+	fm.FileMetadata.ModTime = info.ModTime()
 	fm.Typeflag = typeflag
 
 	return nil

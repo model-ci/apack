@@ -12,6 +12,7 @@ import (
 	"github.com/model-ci/apack/cmd/diff"
 	"github.com/model-ci/apack/cmd/export"
 	"github.com/model-ci/apack/cmd/gen"
+	"github.com/model-ci/apack/cmd/importer"
 	"github.com/model-ci/apack/cmd/info"
 	"github.com/model-ci/apack/cmd/inspect"
 	"github.com/model-ci/apack/cmd/kill"
@@ -132,6 +133,7 @@ func Execute(name, usage, ver, commit string) {
 		info.Command,
 		daemon.Command,
 		tag.Command,
+		importer.Command,
 		version.Command,
 	}
 

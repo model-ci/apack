@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"sort"
 
-	"github.com/model-ci/apack/internal/distribution"
+	"github.com/model-ci/apack/internal/repo"
 	"github.com/model-ci/apack/pkg/progress"
 	oci "github.com/opencontainers/image-spec/specs-go/v1"
 )
@@ -83,7 +83,7 @@ func displayLayers(title string, layers []oci.Descriptor) {
 		fmt.Println(layerTableHeadings)
 		for _, layer := range layers {
 			fmt.Printf(layerTableFormat,
-				distribution.FormatMediaType(layer.ArtifactType),
+				repo.FormatMediaType(layer.ArtifactType),
 				layer.Digest[:17],
 				progress.FormatSize(layer.Size))
 		}

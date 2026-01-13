@@ -9,15 +9,17 @@ import (
 	"path/filepath"
 
 	"github.com/model-ci/apack/internal/config"
-	"github.com/model-ci/apack/internal/distribution"
 	"github.com/model-ci/apack/internal/log"
+	"github.com/model-ci/apack/internal/repo"
 	"github.com/model-ci/apack/internal/runtime"
 	"github.com/model-ci/apack/internal/spec"
 	"github.com/model-ci/apack/internal/task"
 	"github.com/model-ci/apack/internal/types"
+	"github.com/model-ci/apack/pkg/distribution"
 
 	"github.com/model-ci/apack/pkg/layerdb"
 	"github.com/model-ci/apack/pkg/progress"
+	"github.com/model-ci/apack/pkg/tools"
 	"go.uber.org/zap"
 	"oras.land/oras-go/v2/registry"
 	"oras.land/oras-go/v2/registry/remote"
@@ -30,10 +32,16 @@ type BaseService struct {
 	runtime      runtime.Runtime
 	logger       *zap.SugaredLogger
 	config       *Config
+	tools        *tools.Tools
 }
 
 func NewBaseService(path string, m *task.Manager, config *Config) (*BaseService, error) {
-	d, err := distribution.New(path)
+	db, err := layerdb.Open(path, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	d, err := repo.New(path, db)
 	if err != nil {
 		return nil, err
 	}
@@ -41,12 +49,19 @@ func NewBaseService(path string, m *task.Manager, config *Config) (*BaseService,
 	if err != nil {
 		return nil, err
 	}
+
+	t, err := tools.NewTools(db, d, config.Concurrency)
+	if err != nil {
+		return nil, err
+	}
+
 	return &BaseService{
 		path:         path,
 		distribution: d,
 		runtime:      rt,
 		manager:      m,
 		config:       config,
+		tools:        t,
 	}, nil
 }
 
@@ -129,6 +144,18 @@ func (b *BaseService) Export(ctx context.Context, req *types.Request) (*types.Re
 	})
 
 	go b.executeExport(task.Context(), task.ID, req)
+
+	return &types.Response{
+		TaskID: task.ID,
+	}, nil
+}
+
+func (b *BaseService) Import(ctx context.Context, req *types.Request) (*types.Response, error) {
+	task := b.manager.CreateTask("import", map[string]interface{}{
+		"reference": req.Reference,
+	})
+
+	go b.executeImport(task.Context(), task.ID, req)
 
 	return &types.Response{
 		TaskID: task.ID,
@@ -324,19 +351,35 @@ func (b *BaseService) executeExport(ctx context.Context, taskID string, req *typ
 	b.manager.CompleteTask(taskID, err)
 }
 
+func (b *BaseService) executeImport(ctx context.Context, taskID string, req *types.Request) {
+	defer func() {
+		if r := recover(); r != nil {
+			b.manager.CompleteTask(taskID, fmt.Errorf("import panic: %v", r))
+		}
+	}()
+
+	progressLogger := progress.NewLogger(taskID, b.manager, b.logger)
+	log.Logger.Debug("Starting import operation")
+
+	log.Logger.Debugf("req: %+v", req)
+
+	err := b.doImport(ctx, progressLogger, req)
+	b.manager.CompleteTask(taskID, err)
+}
+
 func (b *BaseService) doPush(ctx context.Context, plog *progress.Logger, req *types.Request) error {
 	var reg *remote.Registry
 	var err error
 
 	if req.ConfigJSON != nil {
-		reg, err = distribution.NewRegistryRemote(req.Reference.Registry, &distribution.Options{ConfigJSON: req.ConfigJSON})
+		reg, err = repo.NewRegistryRemote(req.Reference.Registry, &distribution.Options{ConfigJSON: req.ConfigJSON})
 		if err != nil {
 			log.Logger.Errorf("failed to create remote registry: %s", err.Error())
 			return err
 		}
 	} else {
 		configPath := config.JsonPath("")
-		reg, err = distribution.NewRegistry(req.Reference.Registry, &distribution.Options{CredentialsPath: configPath, PlainHTTP: true})
+		reg, err = repo.NewRegistry(req.Reference.Registry, &distribution.Options{CredentialsPath: configPath, PlainHTTP: true})
 		if err != nil {
 			log.Logger.Errorf("failed to create registry: %s", err.Error())
 			return err
@@ -379,14 +422,14 @@ func (b *BaseService) doPull(ctx context.Context, plog *progress.Logger, req *ty
 	var err error
 
 	if req.ConfigJSON != nil {
-		reg, err = distribution.NewRegistryRemote(req.Reference.Registry, &distribution.Options{ConfigJSON: req.ConfigJSON})
+		reg, err = repo.NewRegistryRemote(req.Reference.Registry, &distribution.Options{ConfigJSON: req.ConfigJSON})
 		if err != nil {
 			log.Logger.Errorf("failed to create remote registry: %s", err.Error())
 			return err
 		}
 	} else {
 		configPath := config.JsonPath("")
-		reg, err = distribution.NewRegistry(req.Reference.Registry, &distribution.Options{CredentialsPath: configPath, PlainHTTP: true})
+		reg, err = repo.NewRegistry(req.Reference.Registry, &distribution.Options{CredentialsPath: configPath, PlainHTTP: true})
 		if err != nil {
 			log.Logger.Errorf("failed to create registry: %s", err.Error())
 			return err
@@ -425,7 +468,7 @@ func (b *BaseService) doPull(ctx context.Context, plog *progress.Logger, req *ty
 }
 
 func (b *BaseService) doBuild(ctx context.Context, plog *progress.Logger, req *types.Request) error {
-	makefile := distribution.NewMakefile(req.Artifact, req.Reference.String(), b.config.GetCompress(), true)
+	makefile := repo.NewMakefile(req.Artifact, req.Reference.String(), b.config.GetCompress(), true)
 	desc, err := b.distribution.Bundle(ctx, makefile, plog, &distribution.Options{Concurrency: b.config.Concurrency})
 	if err != nil {
 		return fmt.Errorf("failed to build: %w", err)
@@ -449,5 +492,22 @@ func (b *BaseService) doExport(ctx context.Context, plog *progress.Logger, req *
 		return fmt.Errorf("failed to export: %w", err)
 	}
 	log.Logger.Debug(fmt.Sprintf("Successfully exported %s output: %s", req.ReferenceStr, req.Output))
+	return nil
+}
+
+func (b *BaseService) doImport(ctx context.Context, plog *progress.Logger, req *types.Request) error {
+	tool, err := b.tools.Get(req.User, req.Password, req.Tool)
+	if err != nil {
+		return err
+	}
+
+	desc, err := tool.Fetch(ctx, req.ReferenceStr, b.distribution.Snappath(ctx, req.ReferenceStr), plog)
+	if err != nil {
+		return err
+	}
+
+	log.Logger.Infoln(fmt.Sprintf("Successfully fetch %s:%s, tools: %s", req.Reference.Repository, req.Reference.Reference, req.Tool))
+	log.Logger.Infoln(fmt.Sprintf("Manifest digest: %s", desc.Digest.Encoded()))
+	plog.InfolnWithAction(types.Description{Action: "Fetched", Digest: "digest: " + desc.Digest.String(), Size: fmt.Sprintf("size: %d", desc.Size)}, task.EventComplete)
 	return nil
 }

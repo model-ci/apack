@@ -35,6 +35,8 @@ const (
 	ImageLayerGzip         = schema2.MediaTypeLayer
 	ImageLayerZstd         = OCILayerZstd
 
+	ImageTextMediaType = "text/plain; charset=utf-8"
+
 	OCIImageSnapshotFile = "snapshot.json"
 
 	DockerManifestMediaType  = schema2.MediaTypeManifest

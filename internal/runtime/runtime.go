@@ -6,8 +6,8 @@ import (
 	"path/filepath"
 	"time"
 
-	"github.com/model-ci/apack/internal/distribution"
 	"github.com/model-ci/apack/internal/log"
+	"github.com/model-ci/apack/pkg/distribution"
 
 	"github.com/model-ci/apack/pkg/infer"
 	infercfg "github.com/model-ci/apack/pkg/infer/llama/config"

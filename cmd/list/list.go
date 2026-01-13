@@ -11,9 +11,9 @@ import (
 	gotemplate "text/template"
 
 	"github.com/model-ci/apack/internal/api/base"
-	"github.com/model-ci/apack/internal/distribution"
 	"github.com/model-ci/apack/internal/types"
 	"github.com/model-ci/apack/internal/utils"
+	"github.com/model-ci/apack/pkg/distribution"
 	"github.com/urfave/cli/v2"
 	"oras.land/oras-go/v2/registry"
 )

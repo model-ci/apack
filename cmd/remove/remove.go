@@ -45,12 +45,12 @@ Examples:
 }
 
 type Remove struct {
-	ctx    context.Context
-	artifact  string
-	Force   bool
-	Quiet   bool
-	host string
-	client *utils.Client
+	ctx      context.Context
+	artifact string
+	Force    bool
+	Quiet    bool
+	host     string
+	client   *utils.Client
 }
 
 func NewRemove(ctx *cli.Context) (*Remove, error) {

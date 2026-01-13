@@ -56,8 +56,16 @@ type Params struct {
 	TargetRef registry.Reference
 }
 
+type Import struct {
+	User     string
+	Password string
+	Tool     string
+}
+
 type Request struct {
 	Params
+	Import
+
 	ID           string
 	ReferenceStr string
 	Reference    registry.Reference

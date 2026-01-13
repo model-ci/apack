@@ -57,6 +57,7 @@ func (b *BaseAPI) RegisterRoutes(rr *router.RouterGroup) {
 	ns.POST("/v1/build", b.handleBuild)
 	ns.POST("/v1/tag", b.handleTag)
 	ns.POST("/v1/export", b.handleExport)
+	ns.POST("/v1/import", b.handleImport)
 	ns.POST("/v1/list", b.handleList)
 	ns.POST("/v1/info", b.handleInfo)
 	ns.POST("/v1/inspect", b.handleInspect)
@@ -293,6 +294,22 @@ func (b *BaseAPI) handleExport(w http.ResponseWriter, req *http.Request, params 
 	res, err := b.service.Export(req.Context(), export)
 	if err != nil {
 		utils.WriteError(w, "EXPORT", "export error", http.StatusInternalServerError)
+		return
+	}
+
+	utils.WriteJSON(w, res, http.StatusOK)
+}
+
+func (b *BaseAPI) handleImport(w http.ResponseWriter, req *http.Request, params httprouter.Params) {
+	export := &types.Request{}
+	if err := export.Decode(req.Body); err != nil {
+		utils.WriteError(w, "IMPORT", "failed to read data", http.StatusInternalServerError)
+		return
+	}
+
+	res, err := b.service.Import(req.Context(), export)
+	if err != nil {
+		utils.WriteError(w, "IMPORT", "import error", http.StatusInternalServerError)
 		return
 	}
 

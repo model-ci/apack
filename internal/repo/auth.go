@@ -1,4 +1,4 @@
-package distribution
+package repo
 
 import (
 	"context"
@@ -8,6 +8,7 @@ import (
 	"net/url"
 
 	"github.com/model-ci/apack/internal/consts"
+	"github.com/model-ci/apack/pkg/distribution"
 
 	"oras.land/oras-go/v2/registry/remote"
 	"oras.land/oras-go/v2/registry/remote/auth"
@@ -48,7 +49,7 @@ func NewCredentialStoreFromConfig(cfg []byte) (credentials.Store, error) {
 	return credentials.NewStoreWithFallbacks(existingCredStore, dockerCredStore), nil
 }
 
-func ClientWithAuth(store credentials.Store, opts *Options) (*auth.Client, error) {
+func ClientWithAuth(store credentials.Store, opts *distribution.Options) (*auth.Client, error) {
 	client, err := DefaultClient(opts)
 	if err != nil {
 		return nil, err
@@ -58,7 +59,7 @@ func ClientWithAuth(store credentials.Store, opts *Options) (*auth.Client, error
 	return client, nil
 }
 
-func DefaultClient(opts *Options) (*auth.Client, error) {
+func DefaultClient(opts *distribution.Options) (*auth.Client, error) {
 	transport := http.DefaultTransport.(*http.Transport).Clone()
 	transport.TLSClientConfig.InsecureSkipVerify = !opts.TLSVerify
 	if opts.Proxy != "" {

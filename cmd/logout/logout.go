@@ -5,7 +5,7 @@ import (
 	"fmt"
 
 	"github.com/model-ci/apack/internal/config"
-	"github.com/model-ci/apack/internal/distribution"
+	"github.com/model-ci/apack/internal/repo"
 	"github.com/model-ci/apack/internal/utils"
 	"github.com/urfave/cli/v2"
 )
@@ -51,11 +51,11 @@ func NewLogout(ctx *cli.Context) (*Logout, error) {
 
 func (l *Logout) Run() error {
 	configPath := config.JsonPath("")
-	store, err := distribution.NewCredentialStore(configPath)
+	store, err := repo.NewCredentialStore(configPath)
 	if err != nil {
 		return err
 	}
-	if err := distribution.CredentialsLogout(l.ctx, store, l.Registry); err != nil {
+	if err := repo.CredentialsLogout(l.ctx, store, l.Registry); err != nil {
 		return err
 	}
 

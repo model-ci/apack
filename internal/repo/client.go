@@ -1,4 +1,4 @@
-package distribution
+package repo
 
 import (
 	"fmt"

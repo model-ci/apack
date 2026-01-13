@@ -5,6 +5,7 @@ import (
 	"bytes"
 	"compress/gzip"
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"io/fs"
@@ -39,9 +40,9 @@ type OCI interface {
 	Read(ctx context.Context, desc oci.Descriptor) (io.ReadCloser, error)
 	Write(ctx context.Context, desc oci.Descriptor, content io.ReadCloser, progress io.Writer) error
 	Set(ctx context.Context, desc oci.Descriptor, content io.ReadCloser) error
-	Layering(ctx context.Context, mediaType string, content, snap *os.File, progress io.Writer) (oci.Descriptor, digest.Digest, error)
-	Contenting(ctx context.Context, mediaType string, content *os.File, progress io.Writer) (io.ReadCloser, error)
-	Content(ctx context.Context, desc oci.Descriptor, diffid digest.Digest, content io.ReadCloser) (io.Reader, error)
+	Layering(ctx context.Context, mediaType string, f File, snap *os.File, progress io.Writer) (oci.Descriptor, digest.Digest, error)
+	Contenting(ctx context.Context, mediaType string, f File, progress io.Writer) (io.ReadCloser, error)
+	Content(ctx context.Context, desc oci.Descriptor, diffid digest.Digest, content io.ReadCloser, verify bool) (io.Reader, error)
 	Delete(ctx context.Context, reference string) error
 	Snap(ctx context.Context, reference string) error
 	Purge(ctx context.Context, reference string) error
@@ -342,16 +343,16 @@ func (r *db) Set(ctx context.Context, desc oci.Descriptor, content io.ReadCloser
 	return nil
 }
 
-func (r *db) Layering(ctx context.Context, mediaType string, content, snap *os.File, progress io.Writer) (oci.Descriptor, digest.Digest, error) {
+func (r *db) Layering(ctx context.Context, mediaType string, f File, snap *os.File, progress io.Writer) (oci.Descriptor, digest.Digest, error) {
 	ti := ParseMediaType(mediaType)
-	return r.makeContentLayer(content, snap, ti.Algo, mediaType, progress)
+	return r.makeContentLayer(f, snap, ti.Algo, mediaType, progress)
 }
 
-func (r *db) makeContentLayer(content, snap *os.File, comp Algorithm, mediaType string, progress io.Writer) (oci.Descriptor, digest.Digest, error) {
-	return r.compressLayerV2(content, comp, mediaType, io.Discard, snap, progress)
+func (r *db) makeContentLayer(f File, snap *os.File, comp Algorithm, mediaType string, progress io.Writer) (oci.Descriptor, digest.Digest, error) {
+	return r.compressLayerV2(f, comp, mediaType, io.Discard, snap, progress)
 }
 
-func (r *db) Contenting(ctx context.Context, mediaType string, content *os.File, progress io.Writer) (io.ReadCloser, error) {
+func (r *db) Contenting(ctx context.Context, mediaType string, f File, progress io.Writer) (io.ReadCloser, error) {
 	ti := ParseMediaType(mediaType)
 
 	pr, pw := io.Pipe()
@@ -360,7 +361,7 @@ func (r *db) Contenting(ctx context.Context, mediaType string, content *os.File,
 
 	go func() {
 		defer pw.Close()
-		_, _, compressErr = r.compressLayerV2(content, ti.Algo, mediaType, pw, nil, progress)
+		_, _, compressErr = r.compressLayerV2(f, ti.Algo, mediaType, pw, nil, progress)
 		if compressErr != nil {
 			pw.CloseWithError(compressErr)
 		}
@@ -369,7 +370,7 @@ func (r *db) Contenting(ctx context.Context, mediaType string, content *os.File,
 	return pr, nil
 }
 
-func (r *db) saveContentLayer(content *os.File, comp Algorithm, mediaType string, progress io.Writer) (oci.Descriptor, digest.Digest, error) {
+func (r *db) saveContentLayer(f File, comp Algorithm, mediaType string, progress io.Writer) (oci.Descriptor, digest.Digest, error) {
 	pr, pw := io.Pipe()
 
 	var desc oci.Descriptor
@@ -378,13 +379,13 @@ func (r *db) saveContentLayer(content *os.File, comp Algorithm, mediaType string
 
 	go func() {
 		defer pw.Close()
-		desc, diffid, compressErr = r.compressLayerV2(content, comp, mediaType, pw, nil, progress)
+		desc, diffid, compressErr = r.compressLayerV2(f, comp, mediaType, pw, nil, progress)
 		if compressErr != nil {
 			pw.CloseWithError(compressErr)
 		}
 	}()
 
-	tmpBlobKey := strconv.FormatInt(int64(content.Fd()), 10) + "-" + strconv.FormatInt(time.Now().UnixMicro(), 10)
+	tmpBlobKey := f.Name() + "-" + strconv.FormatInt(time.Now().UnixMicro(), 10)
 
 	_, err := r.min.PutObjectStream(r.bucket, tmpBlobKey, pr, -1, DefaultMediaType, nil, nil)
 	if err != nil {
@@ -407,7 +408,7 @@ func (r *db) saveContentLayer(content *os.File, comp Algorithm, mediaType string
 	return desc, diffid, r.min.RenameObject(r.bucket, tmpBlobKey, blobKey(desc))
 }
 
-func (r *db) compressLayerV2(f *os.File, comp Algorithm, mediaType string, output, rawOutput, progress io.Writer) (oci.Descriptor, digest.Digest, error) {
+func (r *db) compressLayerV2(f File, comp Algorithm, mediaType string, output, rawOutput, progress io.Writer) (oci.Descriptor, digest.Digest, error) {
 	compressedDigester := digest.Canonical.Digester()
 	var diffIdDigester digest.Digester
 
@@ -448,11 +449,6 @@ func (r *db) compressLayerV2(f *os.File, comp Algorithm, mediaType string, outpu
 		tarWriter = tar.NewWriter(tarHashWriter)
 	}
 
-	fi, err := f.Stat()
-	if err != nil {
-		return oci.DescriptorEmptyJSON, diffIdDigester.Digest(), err
-	}
-
 	var progressWriter io.Writer = tarWriter
 	if rawOutput != nil && progress != nil {
 		progressWriter = io.MultiWriter(tarWriter, rawOutput, progress)
@@ -463,7 +459,7 @@ func (r *db) compressLayerV2(f *os.File, comp Algorithm, mediaType string, outpu
 	}
 	// else: progressWriter = tarWriter (默认)
 
-	err = r.streamFileToTar(fi, f, tarWriter, progressWriter)
+	err = r.streamFileToTar(f, tarWriter, progressWriter)
 	if err != nil {
 		return oci.DescriptorEmptyJSON, diffIdDigester.Digest(), err
 	}
@@ -499,8 +495,9 @@ func (cw *countingWriter) Write(p []byte) (n int, err error) {
 	return
 }
 
-func (r *db) streamFileToTar(fi fs.FileInfo, f io.ReadCloser, tw *tar.Writer, pw io.Writer) error {
-	if err := writeHeaderToTar(fi, tw); err != nil {
+func (r *db) streamFileToTar(f File, tw *tar.Writer, pw io.Writer) error {
+	log.Logger.Debugf("start stream file to tar: %s", f.Name())
+	if err := writeHeaderToTar(f, tw); err != nil {
 		return err
 	}
 
@@ -526,8 +523,8 @@ func (r *db) streamFileToTar(fi fs.FileInfo, f io.ReadCloser, tw *tar.Writer, pw
 		}
 	}
 
-	if totalWritten != fi.Size() {
-		return fmt.Errorf("incomplete file write: expected %d bytes, wrote %d bytes", fi.Size(), totalWritten)
+	if totalWritten != f.Size() {
+		return fmt.Errorf("incomplete file write: expected %d bytes, wrote %d bytes", f.Size(), totalWritten)
 	}
 
 	return nil
@@ -598,7 +595,7 @@ func sanitizeTarHeader(header *tar.Header) {
 	header.Gname = ""
 }
 
-func (r *db) Content(ctx context.Context, desc oci.Descriptor, diffid digest.Digest, content io.ReadCloser) (io.Reader, error) {
+func (r *db) Content(ctx context.Context, desc oci.Descriptor, diffid digest.Digest, content io.ReadCloser, verify bool) (io.Reader, error) {
 	var err error
 
 	if content == nil {
@@ -626,12 +623,19 @@ func (r *db) Content(ctx context.Context, desc oci.Descriptor, diffid digest.Dig
 		reader = content
 	}
 
-	return &verifyingReader{
-		reader:   reader,
-		verifier: diffid.Verifier(),
-		diffid:   diffid,
-	}, nil
+	if verify {
+		return &verifyingReader{
+			reader:   reader,
+			verifier: diffid.Verifier(),
+			diffid:   diffid,
+		}, nil
+	}
+	return reader, nil
 }
+
+var (
+	ErrChecksumMismatch = errors.New("checksum mismatch")
+)
 
 type verifyingReader struct {
 	reader   io.ReadCloser
@@ -648,7 +652,7 @@ func (v *verifyingReader) Read(p []byte) (n int, err error) {
 
 	if err == io.EOF && !v.verified {
 		if !v.verifier.Verified() {
-			return n, fmt.Errorf("failed to verify diffid %s: checksum mismatch", v.diffid)
+			return n, fmt.Errorf("failed to verify diffid %s: %w", v.diffid, ErrChecksumMismatch)
 		}
 		v.verified = true
 	}
@@ -907,7 +911,7 @@ func ParseMediaType(mediaType string) MediaType {
 
 	tarPattern := regexp.MustCompile(`\.tar($|[\+\.]|\s)|tar$|tar\+\w+`)
 	if !tarPattern.MatchString(mediaType) {
-		return MediaType{IsTar: false}
+		return MediaType{Algo: Algorithm(None)}
 	}
 
 	compressions := map[string]*regexp.Regexp{

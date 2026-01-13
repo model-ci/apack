@@ -15,6 +15,7 @@ import (
 	"github.com/urfave/cli/v2"
 
 	_ "github.com/model-ci/apack/internal"
+	_ "github.com/model-ci/apack/pkg"
 )
 
 const (

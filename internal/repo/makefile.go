@@ -1,4 +1,4 @@
-package distribution
+package repo
 
 import (
 	"fmt"
@@ -7,6 +7,7 @@ import (
 
 	"github.com/model-ci/apack/internal/spec"
 	"github.com/model-ci/apack/internal/utils"
+	"github.com/model-ci/apack/pkg/distribution"
 	"github.com/model-ci/apack/pkg/layerdb"
 	modelspec "github.com/modelpack/model-spec/specs-go/v1"
 )
@@ -18,7 +19,7 @@ type makefile struct {
 	compatible bool
 }
 
-func NewMakefile(artifact spec.Artifact, reference string, algo layerdb.Algorithm, compatible bool) Makefile {
+func NewMakefile(artifact spec.Artifact, reference string, algo layerdb.Algorithm, compatible bool) distribution.Makefile {
 	return &makefile{
 		artifact:   artifact,
 		reference:  reference,
@@ -31,8 +32,8 @@ func (m *makefile) Reference() string {
 	return m.reference
 }
 
-func (m *makefile) Contents() ([]Content, error) {
-	var contents []Content
+func (m *makefile) Contents() ([]distribution.Content, error) {
+	var contents []distribution.Content
 	for _, model := range m.artifact.Package.Models {
 		mediaType := spec.OCIDetermineMediaType(m.algo)
 		if m.compatible {
@@ -87,12 +88,11 @@ func (m *makefile) Contents() ([]Content, error) {
 	return contents, nil
 }
 
-func (m *makefile) buildContent(mediaType, artifactType string, filename string) (*Content, error) {
-	c := &Content{
+func (m *makefile) buildContent(mediaType, artifactType string, filename string) (*distribution.Content, error) {
+	c := &distribution.Content{
 		Path:         filename,
 		MediaType:    mediaType,
 		ArtifactType: artifactType,
-		Metadata:     &FileMetadata{},
 	}
 
 	path := filepath.Join(m.artifact.Package.Workspace, filename)
@@ -101,15 +101,16 @@ func (m *makefile) buildContent(mediaType, artifactType string, filename string)
 	}
 
 	var err error
-	c.Data, err = os.Open(path)
+	f, err := os.Open(path)
 	if err != nil {
 		return nil, err
 	}
 
-	fi, err := c.Data.Stat()
+	fi, err := f.Stat()
 	if err != nil {
 		return nil, err
 	}
+	c.ReadCloser = f
 
 	return c, c.Metadata.Fill(fi)
 }

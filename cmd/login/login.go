@@ -7,8 +7,9 @@ import (
 	"os"
 
 	"github.com/model-ci/apack/internal/config"
-	"github.com/model-ci/apack/internal/distribution"
+	"github.com/model-ci/apack/internal/repo"
 	"github.com/model-ci/apack/internal/utils"
+	"github.com/model-ci/apack/pkg/distribution"
 	"github.com/urfave/cli/v2"
 	"golang.org/x/term"
 )
@@ -124,22 +125,22 @@ func (l *Login) Run() error {
 
 func (l *Login) Execute() error {
 	configPath := config.JsonPath("")
-	store, err := distribution.NewCredentialStore(configPath)
+	store, err := repo.NewCredentialStore(configPath)
 	if err != nil {
 		return err
 	}
 	opts := &distribution.Options{
 		PlainHTTP: true,
 	}
-	registry, err := distribution.NewRegistry(l.Registry, opts)
+	registry, err := repo.NewRegistry(l.Registry, opts)
 	if err != nil {
 		return fmt.Errorf("could not resolve registry %s: %w", l.Registry, err)
 	}
-	cred := distribution.Cred{
+	cred := repo.Cred{
 		Username: l.Username,
 		Password: l.Password,
 	}
-	if err := distribution.CredentialsLogin(l.ctx, store, registry, cred); err != nil {
+	if err := repo.CredentialsLogin(l.ctx, store, registry, cred); err != nil {
 		return err
 	}
 	return nil

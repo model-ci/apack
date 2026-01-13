@@ -1,4 +1,4 @@
-package distribution
+package repo
 
 import (
 	"archive/tar"
@@ -15,6 +15,7 @@ import (
 	"github.com/model-ci/apack/internal/spec"
 	"github.com/model-ci/apack/internal/task"
 	"github.com/model-ci/apack/internal/utils"
+	"github.com/model-ci/apack/pkg/distribution"
 	"github.com/model-ci/apack/pkg/layerdb"
 	"github.com/model-ci/apack/pkg/progress"
 	modelspec "github.com/modelpack/model-spec/specs-go/v1"
@@ -31,11 +32,7 @@ type local struct {
 	snapPath string
 }
 
-func New(path string) (Distribution, error) {
-	db, err := layerdb.Open(path, nil)
-	if err != nil {
-		return nil, err
-	}
+func New(path string, db layerdb.DB) (distribution.Distribution, error) {
 	dbRaw, err := db.Raw(nil)
 	if err != nil {
 		return nil, err
@@ -47,7 +44,7 @@ func New(path string) (Distribution, error) {
 	}, nil
 }
 
-func (l *local) Pull(ctx context.Context, remote registry.Repository, ref registry.Reference, plog *progress.Logger, opts *Options) (oci.Descriptor, error) {
+func (l *local) Pull(ctx context.Context, remote registry.Repository, ref registry.Reference, plog *progress.Logger, opts *distribution.Options) (oci.Descriptor, error) {
 	desc, err := remote.Resolve(ctx, ref.Reference)
 	if err != nil {
 		return oci.DescriptorEmptyJSON, err
@@ -148,7 +145,7 @@ func (l *local) pullLayer(ctx context.Context, remote registry.Repository, desc 
 	return nil
 }
 
-func (l *local) Push(ctx context.Context, remote registry.Repository, ref registry.Reference, plog *progress.Logger, opts *Options) (oci.Descriptor, error) {
+func (l *local) Push(ctx context.Context, remote registry.Repository, ref registry.Reference, plog *progress.Logger, opts *distribution.Options) (oci.Descriptor, error) {
 	refs := ref.String()
 	manifest, desc, err := l.db.Manifest(ctx, refs)
 	if err != nil {
@@ -228,14 +225,19 @@ func (l *local) pushLayer(ctx context.Context, ref string, remote registry.Repos
 
 	filename, ok := desc.Annotations[modelspec.AnnotationFilepath]
 	if ok {
-		snapref := l.Snappath(ctx, ref)
+		snapref := l.Snaplink(ctx, ref)
 		snapfile := filepath.Join(snapref, filename)
 		f, err := os.Open(snapfile)
 		if err != nil {
 			return err
 		}
 
-		content, cerr = l.db.Contenting(ctx, desc.MediaType, f, nil)
+		fi, err := f.Stat()
+		if err != nil {
+			return err
+		}
+
+		content, cerr = l.db.Contenting(ctx, desc.MediaType, layerdb.NewFile(fi, f), nil)
 	} else {
 		content, err = l.db.Read(ctx, desc)
 		if err != nil {
@@ -260,7 +262,7 @@ func (l *local) pushLayer(ctx context.Context, ref string, remote registry.Repos
 	return nil
 }
 
-func (l *local) Bundle(ctx context.Context, mf Makefile, plog *progress.Logger, opts *Options) (oci.Descriptor, error) {
+func (l *local) Bundle(ctx context.Context, mf distribution.Makefile, plog *progress.Logger, opts *distribution.Options) (oci.Descriptor, error) {
 	config := &layerdb.Config{}
 	var layersMu sync.Mutex
 	var layers []oci.Descriptor
@@ -360,16 +362,20 @@ func (l *local) Bundle(ctx context.Context, mf Makefile, plog *progress.Logger, 
 	return manifestDesc, l.db.Index(ctx, ref, manifestDesc)
 }
 
-func (l *local) bundleLayer(ctx context.Context, content *Content, snapref string, layers *[]oci.Descriptor, layersMu *sync.Mutex, config *layerdb.Config, pw *progress.ProgressWriter) error {
-	filename := filepath.Base(content.Path)
-	sanpname := filepath.Join(snapref, filename)
+func (l *local) BundleOnce(ctx context.Context, content *distribution.Content, snapref string, layers *[]oci.Descriptor, layersMu *sync.Mutex, config *layerdb.Config, pw *progress.ProgressWriter) error {
+	return l.bundleLayer(ctx, content, snapref, layers, layersMu, config, pw)
+}
 
-	snap, err := os.Create(sanpname)
+func (l *local) bundleLayer(ctx context.Context, content *distribution.Content, snapref string, layers *[]oci.Descriptor, layersMu *sync.Mutex, config *layerdb.Config, pw *progress.ProgressWriter) error {
+	filename := filepath.Base(content.Path)
+	snapname := filepath.Join(snapref, filename)
+
+	snap, err := os.Create(snapname)
 	if err != nil {
 		return err
 	}
 
-	layer, digest, err := l.db.Layering(ctx, content.MediaType, content.Data, snap, pw)
+	layer, digest, err := l.db.Layering(ctx, content.MediaType, content, snap, pw)
 	if err != nil {
 		return err
 	}
@@ -384,7 +390,7 @@ func (l *local) bundleLayer(ctx context.Context, content *Content, snapref strin
 
 	config.RootFS.Type = layerdb.TypeLayers
 
-	err = l.db.Set(ctx, layer, io.NopCloser(bytes.NewReader([]byte(filename))))
+	err = l.db.Set(ctx, layer, io.NopCloser(bytes.NewReader([]byte(snapname))))
 	if err != nil {
 		return err
 	}
@@ -394,7 +400,7 @@ func (l *local) bundleLayer(ctx context.Context, content *Content, snapref strin
 	return nil
 }
 
-func (l *local) Extract(ctx context.Context, dir string, reference string, plog *progress.Logger, opts *Options) error {
+func (l *local) Extract(ctx context.Context, dir string, reference string, plog *progress.Logger, opts *distribution.Options) error {
 	manifest, _, err := l.db.Manifest(ctx, reference)
 	if err != nil {
 		return err
@@ -462,7 +468,7 @@ func (l *local) Extract(ctx context.Context, dir string, reference string, plog 
 
 func (l *local) extract(ctx context.Context, desc oci.Descriptor, diffid digest.Digest, dir string, content io.ReadCloser, pw *progress.ProgressWriter) error {
 	path := desc.Annotations[modelspec.AnnotationFilepath]
-	cont, err := l.db.Content(ctx, desc, diffid, content)
+	cont, err := l.db.Content(ctx, desc, diffid, content, true)
 	if err != nil {
 		return err
 	}
@@ -605,22 +611,50 @@ func (l *local) Snappath(ctx context.Context, reference string) string {
 	return filepath.Join(l.snapPath, reference)
 }
 
+func (l *local) Snaplink(ctx context.Context, reference string) string {
+	path := filepath.Join(l.snapPath, reference)
+	if !IsLinkFileExist(path) {
+		return path
+	}
+	refpath, _ := ReadLinkFile(path)
+	return refpath
+}
+
 func (l *local) Snapshot(ctx context.Context, reference string) (string, error) {
 	dir := filepath.Join(l.snapPath, reference)
 	if err := os.MkdirAll(dir, 0755); err != nil {
 		return "", fmt.Errorf("failed to create directories: %w", err)
 	}
-	/*
-		snapref := filepath.Join(l.snapPath, reference)
-		if err := l.extract(ctx, snapref, reference, plog, opts); err != nil {
-			return snapref, err
-		}
-	*/
 	return dir, l.db.Snap(ctx, reference)
 }
 
 func (l *local) Tag(ctx context.Context, ref1, ref2 registry.Reference) error {
-	return l.db.Copy(ctx, ref1.String(), ref2.String())
+	err := l.db.Copy(ctx, ref1.String(), ref2.String())
+	if err != nil {
+		return err
+	}
+
+	ref1path := l.Snappath(ctx, ref1.String())
+	ref2path := l.Snappath(ctx, ref2.String())
+
+	if IsLinkFileExist(ref2path) {
+		// This ref has already been tagged
+		return nil
+	}
+
+	if IsLinkFileExist(ref1path) && !IsLinkFileExist(ref2path) {
+		// This means that ref1 is a tagged ref,
+		// so it is necessary to copy the link of
+		// ref1 to ref2 instead of directly giving
+		// the ref of ref1 to ref2
+		ref, err := ReadLinkFile(ref1path)
+		if err != nil {
+			return err
+		}
+		return WriteLinkFile(ref2path, ref)
+	}
+
+	return WriteLinkFile(ref2path, ref1path)
 }
 
 func (l *local) Config(ctx context.Context, desc oci.Descriptor) (layerdb.Config, error) {

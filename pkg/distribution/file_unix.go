@@ -25,12 +25,12 @@ func (fm *FileMetadata) Fill(info fs.FileInfo) error {
 		return fmt.Errorf("not syscall.Stat_t")
 	}
 
-	fm.Name = info.Name()
-	fm.Mode = uint32(info.Mode().Perm())
+	fm.FileMetadata.Name = info.Name()
+	fm.FileMetadata.Mode = uint32(info.Mode().Perm())
 	fm.Uid = stat.Uid
 	fm.Gid = stat.Gid
-	fm.Size = info.Size()
-	fm.ModTime = info.ModTime()
+	fm.FileMetadata.Size = info.Size()
+	fm.FileMetadata.ModTime = info.ModTime()
 	fm.Typeflag = typeflag
 
 	return nil

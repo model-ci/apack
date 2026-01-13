@@ -60,7 +60,6 @@ func (c *Client) parseHost() {
 			c.scheme = "ws"
 			c.serverURL = "ws://" + c.host
 		} else {
-			// 默认为 Unix socket
 			c.scheme = "ws"
 			c.serverURL = "ws://unix"
 			c.host = "unix://" + c.host

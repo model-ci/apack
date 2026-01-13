@@ -4,8 +4,6 @@ import (
 	"context"
 	"fmt"
 	"os"
-
-	"github.com/model-ci/apack/internal/consts"
 )
 
 type Options struct {
@@ -22,10 +20,10 @@ type Options struct {
 func (o *Options) CompleteAndValidate(ctx context.Context, configRoot string, args []string) error {
 	o.CredentialsPath = "" /*consts.CredentialsPath(configRoot)*/
 
-	if certPath := os.Getenv(consts.CertEnvVar); certPath != "" {
+	if certPath := os.Getenv(CertEnvVar); certPath != "" {
 		o.ClientCertPath = certPath
 	}
-	if certKeyPath := os.Getenv(consts.CertKeyEnvVar); certKeyPath != "" {
+	if certKeyPath := os.Getenv(CertKeyEnvVar); certKeyPath != "" {
 		o.ClientCertKeyPath = certKeyPath
 	}
 	if o.Concurrency < 1 {

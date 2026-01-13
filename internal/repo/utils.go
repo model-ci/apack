@@ -1,8 +1,10 @@
-package distribution
+package repo
 
 import (
 	"context"
+	"errors"
 	"fmt"
+	"os"
 	"path/filepath"
 	"regexp"
 	"strings"
@@ -129,4 +131,40 @@ func FormatMediaType(s string) string {
 	default:
 		return "unknown"
 	}
+}
+
+var (
+	ErrNotFountLinkFile = errors.New("not found link file")
+)
+
+func WriteLinkFile(dirPath string, data string) error {
+	if err := os.MkdirAll(dirPath, 0755); err != nil {
+		return fmt.Errorf("failed to create directory: %w", err)
+	}
+
+	targetPath := filepath.Join(dirPath, ".link")
+
+	if err := os.WriteFile(targetPath, []byte(data), 0644); err != nil {
+		return fmt.Errorf("failed to write .link file: %w", err)
+	}
+
+	return nil
+}
+
+func ReadLinkFile(dirPath string) (string, error) {
+	targetPath := filepath.Join(dirPath, ".link")
+
+	content, err := os.ReadFile(targetPath)
+	if err != nil {
+		return "", fmt.Errorf("failed to read file: %w", err)
+	}
+
+	return string(content), nil
+}
+
+func IsLinkFileExist(dirPath string) bool {
+	targetPath := filepath.Join(dirPath, ".link")
+	_, err := os.Stat(targetPath)
+	// If err is nil, file exists. If err is "not exist", file doesn't exist.
+	return !os.IsNotExist(err)
 }
