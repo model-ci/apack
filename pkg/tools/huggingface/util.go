@@ -1,13 +1,21 @@
-package kitops
+package huggingface
 
 import (
 	"context"
 	"fmt"
+	"strings"
 
+	"github.com/model-ci/apack/internal/spec"
 	"github.com/model-ci/apack/pkg/layerdb"
 	oci "github.com/opencontainers/image-spec/specs-go/v1"
 	"oras.land/oras-go/v2"
 	"oras.land/oras-go/v2/content"
+)
+
+const (
+	Endpoint   = "huggingface.co"
+	ResolveURL = "https://%s/%s/resolve/%s/%s"
+	TreeURL    = "https://%s/api/models/%s/tree/%s"
 )
 
 func getManifest(ctx context.Context, store oras.ReadOnlyTarget, manifestDesc oci.Descriptor) (*layerdb.Manifest, error) {
@@ -52,4 +60,15 @@ func getConfig(ctx context.Context, store oras.ReadOnlyTarget, configDesc oci.De
 	}
 
 	return config, nil
+}
+
+func makeArtifact(dir *spec.Directory, repo string) (*spec.Artifact, error) {
+	sections := strings.Split(repo, "/")
+	model := spec.ModelSpec{}
+	if len(sections) >= 2 {
+		model.Descriptor.Name = sections[len(sections)-1]
+		model.Descriptor.Authors = []string{sections[len(sections)-2]}
+	}
+
+	return spec.Gen(dir, &spec.Artifact{Spec: model})
 }

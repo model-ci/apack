@@ -60,6 +60,9 @@ type Import struct {
 	User     string
 	Password string
 	Tool     string
+	Endpoint string
+	Repo     string
+	Branch   string
 }
 
 type Request struct {

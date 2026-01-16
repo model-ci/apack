@@ -1,27 +1,27 @@
-package repo
+package huggingface
 
 import (
 	"context"
-	"fmt"
-	"os"
-	"path/filepath"
 
 	"github.com/model-ci/apack/internal/spec"
-	"github.com/model-ci/apack/internal/utils"
 	"github.com/model-ci/apack/pkg/distribution"
 	"github.com/model-ci/apack/pkg/layerdb"
 	modelspec "github.com/modelpack/model-spec/specs-go/v1"
 )
 
 type makefile struct {
+	Repository
+
 	artifact   spec.Artifact
 	reference  string
 	algo       layerdb.Algorithm
+	token      string
 	compatible bool
 }
 
-func NewMakefile(artifact spec.Artifact, reference string, algo layerdb.Algorithm, compatible bool) distribution.Makefile {
+func NewMakefile(artifact spec.Artifact, reference string, algo layerdb.Algorithm, repo Repository, compatible bool) distribution.Makefile {
 	return &makefile{
+		Repository: repo,
 		artifact:   artifact,
 		reference:  reference,
 		algo:       algo,
@@ -33,7 +33,7 @@ func (m *makefile) Reference() string {
 	return m.reference
 }
 
-func (m *makefile) Contents(_ context.Context) ([]distribution.Content, error) {
+func (m *makefile) Contents(ctx context.Context) ([]distribution.Content, error) {
 	var contents []distribution.Content
 	for _, model := range m.artifact.Package.Models {
 		mediaType := spec.OCIDetermineMediaType(m.algo)
@@ -41,7 +41,7 @@ func (m *makefile) Contents(_ context.Context) ([]distribution.Content, error) {
 			mediaType = spec.CompatibleOCIDetermineMediaType(m.algo)
 		}
 		artifactType := spec.InferMediaType(model.Path, m.algo)
-		c, err := m.buildContent(mediaType, artifactType, model.Path)
+		c, err := m.buildContent(ctx, mediaType, artifactType, model.Path, model.Size)
 		if err != nil {
 			return nil, err
 		}
@@ -54,18 +54,20 @@ func (m *makefile) Contents(_ context.Context) ([]distribution.Content, error) {
 			mediaType = spec.CompatibleOCIDetermineMediaType(m.algo)
 		}
 		artifactType := spec.DetermineMediaType(spec.FileTypeDataset, m.algo)
-		c, err := m.buildContent(mediaType, artifactType, datasets.Path)
+		c, err := m.buildContent(ctx, mediaType, artifactType, datasets.Path, datasets.Size)
 		if err != nil {
 			return nil, err
 		}
 		contents = append(contents, *c)
 	}
-
 	/*
-		for _, code := range m.artifact.Codes {
+		for _, code := range m.artifact.Package.Codes {
 			mediaType := spec.OCIDetermineMediaType(m.algo)
+			if m.compatible {
+				mediaType = spec.CompatibleOCIDetermineMediaType(m.algo)
+			}
 			artifactType := spec.DetermineMediaType(spec.FileTypeDataset, m.algo)
-			c, err := m.buildContent(mediaType, artifactType, code.Path)
+			c, err := m.buildContent(ctx, mediaType, artifactType, code.Path, code.Size)
 			if err != nil {
 				return nil, err
 			}
@@ -79,7 +81,7 @@ func (m *makefile) Contents(_ context.Context) ([]distribution.Content, error) {
 			mediaType = spec.CompatibleOCIDetermineMediaType(m.algo)
 		}
 		artifactType := spec.DetermineMediaType(spec.FileTypeDocs, m.algo)
-		c, err := m.buildContent(mediaType, artifactType, doc.Path)
+		c, err := m.buildContent(ctx, mediaType, artifactType, doc.Path, doc.Size)
 		if err != nil {
 			return nil, err
 		}
@@ -89,31 +91,17 @@ func (m *makefile) Contents(_ context.Context) ([]distribution.Content, error) {
 	return contents, nil
 }
 
-func (m *makefile) buildContent(mediaType, artifactType string, filename string) (*distribution.Content, error) {
-	c := &distribution.Content{
+func (m *makefile) buildContent(ctx context.Context, mediaType, artifactType string, filename string, size int64) (*distribution.Content, error) {
+	metadata := &distribution.FileMetadata{}
+	metadata.Name = filename
+	metadata.Size = size
+	return &distribution.Content{
 		Path:         filename,
 		MediaType:    mediaType,
 		ArtifactType: artifactType,
-	}
-
-	path := filepath.Join(m.artifact.Package.Workspace, filename)
-	if !utils.FileExist(path) {
-		return nil, fmt.Errorf("file %s does not exist", c.Path)
-	}
-
-	var err error
-	f, err := os.Open(path)
-	if err != nil {
-		return nil, err
-	}
-
-	fi, err := f.Stat()
-	if err != nil {
-		return nil, err
-	}
-	c.ReadCloser = f
-
-	return c, c.Metadata.Fill(fi)
+		Overload:     m.Fetch,
+		Metadata:     metadata,
+	}, nil
 }
 
 func (m *makefile) ConfigMediaType() string {

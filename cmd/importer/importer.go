@@ -4,10 +4,12 @@ import (
 	"context"
 	"fmt"
 	"net/http"
+	"strings"
 
 	"github.com/model-ci/apack/internal/api/base"
 	"github.com/model-ci/apack/internal/types"
 	"github.com/model-ci/apack/internal/utils"
+	"github.com/model-ci/apack/pkg/tools/huggingface"
 	"github.com/model-ci/apack/pkg/tools/ollama"
 	"github.com/urfave/cli/v2"
 	"oras.land/oras-go/v2/registry"
@@ -39,9 +41,34 @@ Examples:
 			EnvVars: []string{"APACK_IMPORT_PASSWORD"},
 		},
 		&cli.StringFlag{
-			Name:    "tools",
+			Name:  "tools",
+			Usage: "Use tools from the specified toolchain, support huggingface, ollama etc",
+		},
+		&cli.StringFlag{
+			Name:    "tag",
 			Aliases: []string{"t"},
-			Usage:   "Use tools from the specified toolchain, support kitops/jozu, ollama",
+			Value:   "latest",
+			Usage:   "tag to use",
+		},
+		&cli.StringFlag{
+			Name:    "branch",
+			Aliases: []string{"b"},
+			Value:   "main",
+			Usage:   "branch to use",
+		},
+		&cli.StringFlag{
+			Name:    "endpoint",
+			Value:   huggingface.Endpoint,
+			Aliases: []string{"e"},
+			Usage:   "Endpoint for the huggingface model hub",
+			EnvVars: []string{"HF_ENDPOINT"},
+		},
+		&cli.StringFlag{
+			Name:    "registry",
+			Value:   ollama.Registry,
+			Aliases: []string{"r"},
+			Usage:   "Registry address for the ollama repo",
+			EnvVars: []string{"OLLAMA_REGISTRY"},
 		},
 		&cli.BoolFlag{
 			Name:    "quiet",
@@ -69,6 +96,11 @@ type Importer struct {
 	username     string
 	password     string
 	tools        string
+	endpoint     string
+	registry     string
+	branch       string
+	tag          string
+	repo         string
 	client       *utils.Client
 }
 
@@ -81,6 +113,10 @@ func NewImporter(ctx *cli.Context) (*Importer, error) {
 	importer.username = ctx.String("username")
 	importer.password = ctx.String("password")
 	importer.tools = ctx.String("tools")
+	importer.endpoint = ctx.String("endpoint")
+	importer.registry = ctx.String("registry")
+	importer.branch = ctx.String("branch")
+	importer.tag = ctx.String("tag")
 
 	return importer, importer.completeAndValidate()
 }
@@ -94,9 +130,22 @@ func (i *Importer) completeAndValidate() error {
 
 	if i.referenceStr == "" {
 		return fmt.Errorf("artifact reference is required")
+	} else {
+		i.repo = i.referenceStr
 	}
 
-	i.reference = ollama.MakeReference(i.referenceStr)
+	switch i.tools {
+	case ollama.Name:
+		i.reference = ollama.MakeReference(i.referenceStr)
+		i.reference.Registry = i.registry
+	case huggingface.Name:
+		i.referenceStr = fmt.Sprintf("%s/%s:%s", i.endpoint, strings.ToLower(i.referenceStr), i.tag)
+		i.reference, err = registry.ParseReference(i.referenceStr)
+		if err != nil {
+			return err
+		}
+	}
+
 	if err := i.reference.Validate(); err != nil {
 		return err
 	}
@@ -118,6 +167,9 @@ func (i *Importer) Run() error {
 			User:     i.username,
 			Password: i.password,
 			Tool:     i.tools,
+			Endpoint: i.endpoint,
+			Repo:     i.repo,
+			Branch:   i.branch,
 		},
 		Reference:    i.reference,
 		ReferenceStr: i.reference.String(),

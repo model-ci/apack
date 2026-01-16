@@ -84,8 +84,8 @@ func (o *Ollama) Fetch(ctx context.Context, reference string, path string, plog 
 	var layers []oci.Descriptor
 
 	pkg := spec.Package{
-		Name:      fmt.Sprintf("%s-%s-%s-%s.%s", 
-						conf.ModelFamily, repo.Reference.Reference, conf.OS, conf.Architecture, conf.ModelFormat),
+		Name: fmt.Sprintf("%s-%s-%s-%s.%s",
+			conf.ModelFamily, repo.Reference.Reference, conf.OS, conf.Architecture, conf.ModelFormat),
 		Workspace: Name,
 		Reference: reference,
 		Size:      desc.Size,
@@ -246,3 +246,5 @@ func (o *Ollama) output(ctx context.Context, desc oci.Descriptor, diffid digest.
 
 	return o.dstb.BundleOnce(ctx, content, dir, layers, layersMu, config, pw)
 }
+
+func (o *Ollama) OverideEndpoint(ctx context.Context, ep string) {}

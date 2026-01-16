@@ -8,7 +8,7 @@ and this project follows [Semantic Versioning](https://semver.org/).
 ## [Unreleased]
 
 ### 0.0.2 In Progress...
-- Support for various cloud imports including Ollama, jozu/kitops
+- Support for various cloud imports including Ollama, huggingface
 - Support for save, load and other offline package export/import functions
 - Multi-language SDKs (Python, JavaScript, Java)
 - More inference engine support (TensorRT, OpenVINO)

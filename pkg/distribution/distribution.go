@@ -42,6 +42,7 @@ type Content struct {
 	MediaType    string
 	ArtifactType string
 	Metadata     *FileMetadata
+	Overload     func(context.Context, *Content) error
 }
 
 func (c *Content) Name() string {
@@ -78,7 +79,7 @@ func (c *Content) Gid() uint32 {
 
 type Makefile interface {
 	Reference() string
-	Contents() ([]Content, error)
+	Contents(context.Context) ([]Content, error)
 	ConfigMediaType() string
 	ArtifactConfigType() string
 	ManifestMediaType() string

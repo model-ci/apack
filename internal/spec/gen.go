@@ -24,7 +24,7 @@ const (
 )
 
 const (
-	OCIVersion = "1.0.1"	
+	OCIVersion = "1.0.1"
 )
 
 var weightsSuffixes = []string{
@@ -85,6 +85,7 @@ func Gen(dir *Directory, a *Artifact) (*Artifact, error) {
 			log.Logger.Infof("Found readme file '%s'", file.Name)
 			artifact.Package.Docs = append(artifact.Package.Docs, Doc{
 				Path:        file.Name,
+				Size:        file.Size,
 				Description: "Readme file",
 			})
 			continue
@@ -92,6 +93,7 @@ func Gen(dir *Directory, a *Artifact) (*Artifact, error) {
 			log.Logger.Infof("Found license file '%s'", file.Name)
 			artifact.Package.Docs = append(artifact.Package.Docs, Doc{
 				Path:        file.Name,
+				Size:        file.Size,
 				Description: "License file",
 			})
 			licenseType, err := detectLicense(file.Path)
@@ -111,9 +113,9 @@ func Gen(dir *Directory, a *Artifact) (*Artifact, error) {
 			log.Logger.Infof("Detected config file '%s'", file.Path)
 			configFiles = append(configFiles, file)
 		case FileTypeDocs:
-			artifact.Package.Docs = append(artifact.Package.Docs, Doc{Path: file.Path})
+			artifact.Package.Docs = append(artifact.Package.Docs, Doc{Path: file.Path, Size: file.Size})
 		case FileTypeDataset:
-			artifact.Package.DataSets = append(artifact.Package.DataSets, DataSet{Path: file.Path})
+			artifact.Package.DataSets = append(artifact.Package.DataSets, DataSet{Path: file.Path, Size: file.Size})
 		default:
 			log.Logger.Infof("File %s is either code or unknown type. Will be added as a catch-all section", file.Path)
 			includeCatchallSection = true
@@ -136,12 +138,12 @@ func Gen(dir *Directory, a *Artifact) (*Artifact, error) {
 		}
 		log.Logger.Info("Adding config files as model parts")
 		for _, configFile := range configFiles {
-			artifact.Package.Models = append(artifact.Package.Models, Model{Path: configFile.Path})
+			artifact.Package.Models = append(artifact.Package.Models, Model{Path: configFile.Path, Size: configFile.Size})
 		}
 	} else {
 		log.Logger.Info("No model detected; adding config files as dataset layers")
 		for _, configFile := range configFiles {
-			artifact.Package.DataSets = append(artifact.Package.DataSets, DataSet{Path: configFile.Path})
+			artifact.Package.DataSets = append(artifact.Package.DataSets, DataSet{Path: configFile.Path, Size: configFile.Size})
 		}
 	}
 
@@ -352,7 +354,7 @@ func addModelToArtifact(artifact *Artifact, files []File) error {
 	}
 
 	for _, file := range files {
-		artifact.Package.Models = append(artifact.Package.Models, Model{Path: file.Path})
+		artifact.Package.Models = append(artifact.Package.Models, Model{Path: file.Path, Size: file.Size})
 	}
 
 	return nil
@@ -391,6 +393,7 @@ type Directory struct {
 }
 
 type File struct {
+	ID   string
 	Name string
 	Path string
 	Size int64

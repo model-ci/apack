@@ -167,6 +167,24 @@ func easyjson6601e8cdDecodeGithubComModelCiApackInternalTypes1(in *jlexer.Lexer,
 			} else {
 				out.Tool = string(in.String())
 			}
+		case "Endpoint":
+			if in.IsNull() {
+				in.Skip()
+			} else {
+				out.Endpoint = string(in.String())
+			}
+		case "Repo":
+			if in.IsNull() {
+				in.Skip()
+			} else {
+				out.Repo = string(in.String())
+			}
+		case "Branch":
+			if in.IsNull() {
+				in.Skip()
+			} else {
+				out.Branch = string(in.String())
+			}
 		case "Overwrite":
 			if in.IsNull() {
 				in.Skip()
@@ -240,6 +258,21 @@ func easyjson6601e8cdEncodeGithubComModelCiApackInternalTypes1(out *jwriter.Writ
 		const prefix string = ",\"Tool\":"
 		out.RawString(prefix)
 		out.String(string(in.Tool))
+	}
+	{
+		const prefix string = ",\"Endpoint\":"
+		out.RawString(prefix)
+		out.String(string(in.Endpoint))
+	}
+	{
+		const prefix string = ",\"Repo\":"
+		out.RawString(prefix)
+		out.String(string(in.Repo))
+	}
+	{
+		const prefix string = ",\"Branch\":"
+		out.RawString(prefix)
+		out.String(string(in.Branch))
 	}
 	{
 		const prefix string = ",\"Overwrite\":"
@@ -748,6 +781,24 @@ func easyjson6601e8cdDecodeGithubComModelCiApackInternalTypes6(in *jlexer.Lexer,
 			} else {
 				out.Tool = string(in.String())
 			}
+		case "Endpoint":
+			if in.IsNull() {
+				in.Skip()
+			} else {
+				out.Endpoint = string(in.String())
+			}
+		case "Repo":
+			if in.IsNull() {
+				in.Skip()
+			} else {
+				out.Repo = string(in.String())
+			}
+		case "Branch":
+			if in.IsNull() {
+				in.Skip()
+			} else {
+				out.Branch = string(in.String())
+			}
 		default:
 			in.SkipRecursive()
 		}
@@ -776,6 +827,21 @@ func easyjson6601e8cdEncodeGithubComModelCiApackInternalTypes6(out *jwriter.Writ
 		const prefix string = ",\"Tool\":"
 		out.RawString(prefix)
 		out.String(string(in.Tool))
+	}
+	{
+		const prefix string = ",\"Endpoint\":"
+		out.RawString(prefix)
+		out.String(string(in.Endpoint))
+	}
+	{
+		const prefix string = ",\"Repo\":"
+		out.RawString(prefix)
+		out.String(string(in.Repo))
+	}
+	{
+		const prefix string = ",\"Branch\":"
+		out.RawString(prefix)
+		out.String(string(in.Branch))
 	}
 	out.RawByte('}')
 }

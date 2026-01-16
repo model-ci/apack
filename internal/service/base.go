@@ -501,6 +501,10 @@ func (b *BaseService) doImport(ctx context.Context, plog *progress.Logger, req *
 		return err
 	}
 
+	tool.OverideEndpoint(ctx, req.Endpoint)
+	ctx = context.WithValue(ctx, "repo", req.Repo)
+	ctx = context.WithValue(ctx, "branch", req.Branch)
+
 	desc, err := tool.Fetch(ctx, req.ReferenceStr, b.distribution.Snappath(ctx, req.ReferenceStr), plog)
 	if err != nil {
 		return err

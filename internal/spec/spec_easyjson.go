@@ -152,7 +152,7 @@ func easyjson4ca8a529DecodeGithubComModelCiApackInternalSpec(in *jlexer.Lexer, o
 				in.Delim('[')
 				if out.Docs == nil {
 					if !in.IsDelim(']') {
-						out.Docs = make([]Doc, 0, 2)
+						out.Docs = make([]Doc, 0, 1)
 					} else {
 						out.Docs = []Doc{}
 					}
@@ -1155,6 +1155,12 @@ func easyjson4ca8a529DecodeGithubComModelCiApackInternalSpec2(in *jlexer.Lexer, 
 			} else {
 				out.Path = string(in.String())
 			}
+		case "size":
+			if in.IsNull() {
+				in.Skip()
+			} else {
+				out.Size = int64(in.Int64())
+			}
 		case "license":
 			if in.IsNull() {
 				in.Skip()
@@ -1214,6 +1220,16 @@ func easyjson4ca8a529EncodeGithubComModelCiApackInternalSpec2(out *jwriter.Write
 			out.RawString(prefix)
 		}
 		out.String(string(in.Path))
+	}
+	if in.Size != 0 {
+		const prefix string = ",\"size\":"
+		if first {
+			first = false
+			out.RawString(prefix[1:])
+		} else {
+			out.RawString(prefix)
+		}
+		out.Int64(int64(in.Size))
 	}
 	if in.License != "" {
 		const prefix string = ",\"license\":"
@@ -1297,6 +1313,12 @@ func easyjson4ca8a529DecodeGithubComModelCiApackInternalSpec3(in *jlexer.Lexer, 
 			} else {
 				out.Path = string(in.String())
 			}
+		case "size":
+			if in.IsNull() {
+				in.Skip()
+			} else {
+				out.Size = int64(in.Int64())
+			}
 		case "description":
 			if in.IsNull() {
 				in.Skip()
@@ -1321,6 +1343,11 @@ func easyjson4ca8a529EncodeGithubComModelCiApackInternalSpec3(out *jwriter.Write
 		const prefix string = ",\"path\":"
 		out.RawString(prefix[1:])
 		out.String(string(in.Path))
+	}
+	{
+		const prefix string = ",\"size\":"
+		out.RawString(prefix)
+		out.Int64(int64(in.Size))
 	}
 	if in.Description != "" {
 		const prefix string = ",\"description\":"
@@ -1379,6 +1406,12 @@ func easyjson4ca8a529DecodeGithubComModelCiApackInternalSpec4(in *jlexer.Lexer, 
 			} else {
 				out.Path = string(in.String())
 			}
+		case "size":
+			if in.IsNull() {
+				in.Skip()
+			} else {
+				out.Size = int64(in.Int64())
+			}
 		case "description":
 			if in.IsNull() {
 				in.Skip()
@@ -1428,6 +1461,16 @@ func easyjson4ca8a529EncodeGithubComModelCiApackInternalSpec4(out *jwriter.Write
 			out.RawString(prefix)
 		}
 		out.String(string(in.Path))
+	}
+	if in.Size != 0 {
+		const prefix string = ",\"size\":"
+		if first {
+			first = false
+			out.RawString(prefix[1:])
+		} else {
+			out.RawString(prefix)
+		}
+		out.Int64(int64(in.Size))
 	}
 	if in.Description != "" {
 		const prefix string = ",\"description\":"
@@ -1511,6 +1554,12 @@ func easyjson4ca8a529DecodeGithubComModelCiApackInternalSpec5(in *jlexer.Lexer, 
 			} else {
 				out.Path = string(in.String())
 			}
+		case "size":
+			if in.IsNull() {
+				in.Skip()
+			} else {
+				out.Size = int64(in.Int64())
+			}
 		case "description":
 			if in.IsNull() {
 				in.Skip()
@@ -1542,6 +1591,16 @@ func easyjson4ca8a529EncodeGithubComModelCiApackInternalSpec5(out *jwriter.Write
 		first = false
 		out.RawString(prefix[1:])
 		out.String(string(in.Path))
+	}
+	if in.Size != 0 {
+		const prefix string = ",\"size\":"
+		if first {
+			first = false
+			out.RawString(prefix[1:])
+		} else {
+			out.RawString(prefix)
+		}
+		out.Int64(int64(in.Size))
 	}
 	if in.Description != "" {
 		const prefix string = ",\"description\":"

@@ -15,6 +15,7 @@ const (
 )
 
 type Tool interface {
+	OverideEndpoint(ctx context.Context, ep string)
 	Fetch(ctx context.Context, reference string, path string, plog *progress.Logger) (oci.Descriptor, error)
 }
 

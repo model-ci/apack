@@ -36,6 +36,7 @@ type Model struct {
 	Name        string `json:"name,omitempty" yaml:"name,omitempty"`
 	Type        string `json:"type,omitempty" yaml:"type,omitempty"`
 	Path        string `json:"path,omitempty" yaml:"path,omitempty"`
+	Size        int64  `json:"size,omitempty" yaml:"size,omitempty"`
 	License     string `json:"license,omitempty" yaml:"license,omitempty"`
 	Extensions  any    `json:"extensions,omitempty" yaml:"extensions,omitempty"`
 	Description string `json:"description,omitempty" yaml:"description,omitempty"`
@@ -43,6 +44,7 @@ type Model struct {
 
 type Code struct {
 	Path        string `json:"path,omitempty" yaml:"path,omitempty"`
+	Size        int64  `json:"size,omitempty" yaml:"size,omitempty"`
 	Description string `json:"description,omitempty" yaml:"description,omitempty"`
 	License     string `json:"license,omitempty" yaml:"license,omitempty"`
 }
@@ -50,6 +52,7 @@ type Code struct {
 type DataSet struct {
 	Name        string `json:"name,omitempty" yaml:"name,omitempty"`
 	Path        string `json:"path,omitempty" yaml:"path,omitempty"`
+	Size        int64  `json:"size,omitempty" yaml:"size,omitempty"`
 	Description string `json:"description,omitempty" yaml:"description,omitempty"`
 	License     string `json:"license,omitempty" yaml:"license,omitempty"`
 	Extensions  any    `json:"extensions,omitempty" yaml:"extensions,omitempty"`
@@ -57,6 +60,7 @@ type DataSet struct {
 
 type Doc struct {
 	Path        string `json:"path" yaml:"path"`
+	Size        int64  `json:"size" yaml:"size"`
 	Description string `json:"description,omitempty" yaml:"description,omitempty"`
 }
 
@@ -68,8 +72,8 @@ type ModelSpec struct {
 func New(p Package, s ModelSpec) *Artifact {
 	return &Artifact{
 		OCIVersion: OCIVersion,
-		Package: p,
-		Spec:    s,
+		Package:    p,
+		Spec:       s,
 	}
 }
 

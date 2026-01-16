@@ -267,7 +267,7 @@ func (l *local) Bundle(ctx context.Context, mf distribution.Makefile, plog *prog
 	var layersMu sync.Mutex
 	var layers []oci.Descriptor
 
-	contents, err := mf.Contents()
+	contents, err := mf.Contents(ctx)
 	if err != nil {
 		return oci.DescriptorEmptyJSON, err
 	}
