@@ -33,6 +33,7 @@ type Package struct {
 }
 
 type Model struct {
+	ID          string `json:"id,omitempty" yaml:"id,omitempty"`
 	Name        string `json:"name,omitempty" yaml:"name,omitempty"`
 	Type        string `json:"type,omitempty" yaml:"type,omitempty"`
 	Path        string `json:"path,omitempty" yaml:"path,omitempty"`
@@ -43,6 +44,7 @@ type Model struct {
 }
 
 type Code struct {
+	ID          string `json:"id,omitempty" yaml:"id,omitempty"`
 	Path        string `json:"path,omitempty" yaml:"path,omitempty"`
 	Size        int64  `json:"size,omitempty" yaml:"size,omitempty"`
 	Description string `json:"description,omitempty" yaml:"description,omitempty"`
@@ -50,6 +52,7 @@ type Code struct {
 }
 
 type DataSet struct {
+	ID          string `json:"id,omitempty" yaml:"id,omitempty"`
 	Name        string `json:"name,omitempty" yaml:"name,omitempty"`
 	Path        string `json:"path,omitempty" yaml:"path,omitempty"`
 	Size        int64  `json:"size,omitempty" yaml:"size,omitempty"`
@@ -59,6 +62,7 @@ type DataSet struct {
 }
 
 type Doc struct {
+	ID          string `json:"id,omitempty" yaml:"id,omitempty"`
 	Path        string `json:"path" yaml:"path"`
 	Size        int64  `json:"size" yaml:"size"`
 	Description string `json:"description,omitempty" yaml:"description,omitempty"`

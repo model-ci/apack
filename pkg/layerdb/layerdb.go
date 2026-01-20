@@ -348,7 +348,11 @@ func (r *db) Layering(ctx context.Context, mediaType string, f File, snap *os.Fi
 	return r.makeContentLayer(f, snap, ti.Algo, mediaType, progress)
 }
 
-func (r *db) makeContentLayer(f File, snap *os.File, comp Algorithm, mediaType string, progress io.Writer) (oci.Descriptor, digest.Digest, error) {
+func (r *db) makeContentLayer(f File, snapfile *os.File, comp Algorithm, mediaType string, progress io.Writer) (oci.Descriptor, digest.Digest, error) {
+	var snap io.Writer
+	if snapfile != nil {
+		snap = snapfile
+	}
 	return r.compressLayerV2(f, comp, mediaType, io.Discard, snap, progress)
 }
 

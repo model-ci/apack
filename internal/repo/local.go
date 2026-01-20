@@ -368,16 +368,28 @@ func (l *local) BundleOnce(ctx context.Context, content *distribution.Content, s
 
 func (l *local) bundleLayer(ctx context.Context, content *distribution.Content, snapref string, layers *[]oci.Descriptor, layersMu *sync.Mutex, config *layerdb.Config, pw *progress.ProgressWriter) error {
 	filename := filepath.Base(content.Path)
-	snapname := filepath.Join(snapref, filename)
 
-	snap, err := os.Create(snapname)
-	if err != nil {
-		return err
-	}
+	var snapname string
+	var layer oci.Descriptor
+	var dgt digest.Digest
+	var err error
 
-	layer, digest, err := l.db.Layering(ctx, content.MediaType, content, snap, pw)
-	if err != nil {
-		return err
+	if snapref != "" {
+		snapname := filepath.Join(snapref, filename)
+		snap, err := os.Create(snapname)
+		if err != nil {
+			return err
+		}
+
+		layer, dgt, err = l.db.Layering(ctx, content.MediaType, content, snap, pw)
+		if err != nil {
+			return err
+		}
+	} else {
+		layer, dgt, err = l.db.Layering(ctx, content.MediaType, content, nil, pw)
+		if err != nil {
+			return err
+		}
 	}
 
 	layer.ArtifactType = content.ArtifactType
@@ -385,7 +397,7 @@ func (l *local) bundleLayer(ctx context.Context, content *distribution.Content, 
 
 	layersMu.Lock()
 	*layers = append(*layers, layer)
-	config.RootFS.DiffIDs = append(config.RootFS.DiffIDs, digest)
+	config.RootFS.DiffIDs = append(config.RootFS.DiffIDs, dgt)
 	layersMu.Unlock()
 
 	config.RootFS.Type = layerdb.TypeLayers

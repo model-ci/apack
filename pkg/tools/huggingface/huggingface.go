@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"net/http"
+	"path/filepath"
 	"sync"
 	"time"
 
@@ -79,14 +80,14 @@ func (hf *Huggingface) Fetch(ctx context.Context, reference string, path string,
 
 	log.Logger.Debugf("[tool: %s] start fetch for: %s", Name, reference)
 
-	sem := semaphore.NewWeighted(int64(hf.concurrency))
+	fetchSem := semaphore.NewWeighted(int64(hf.concurrency))
 	fetchProgress := progress.NewProgress()
-	errs, errCtx := errgroup.WithContext(ctx)
+	fetchErrs, fetchErrCtx := errgroup.WithContext(ctx)
 	fmtErr := func(mediaType string, err error) error {
 		if err == nil {
 			return nil
 		}
-		return fmt.Errorf("[tool: %s] failed to fetch %s layer: %w", Name, mediaType, err)
+		return fmt.Errorf("[tool: %s] failed to %s layer: %w", Name, mediaType, err)
 	}
 
 	snapRef, err := hf.dstb.Snapshot(ctx, reference)
@@ -94,11 +95,12 @@ func (hf *Huggingface) Fetch(ctx context.Context, reference string, path string,
 		return oci.DescriptorEmptyJSON, err
 	}
 
-	var semErr error
+	var fetchSemErr error
 	for _, content := range contents {
 		c := content
-		if err := c.Overload(ctx, &c); err != nil {
-			return oci.DescriptorEmptyJSON, err
+		if c.Size() == 0 {
+			log.Logger.Warnf("fetch file size is zero: %s", c.Path)
+			continue
 		}
 
 		if c.Path == "" {
@@ -106,8 +108,8 @@ func (hf *Huggingface) Fetch(ctx context.Context, reference string, path string,
 			continue
 		}
 
-		if err := sem.Acquire(errCtx, 1); err != nil {
-			semErr = err
+		if err := fetchSem.Acquire(fetchErrCtx, 1); err != nil {
+			fetchSemErr = err
 			break
 		}
 
@@ -116,22 +118,70 @@ func (hf *Huggingface) Fetch(ctx context.Context, reference string, path string,
 
 		log.Logger.Debugf("[tool: %s] start fetch for: %s, %+v, %+v", Name, c.Path, c, c.Metadata)
 
-		errs.Go(func() error {
-			defer sem.Release(1)
-			return fmtErr(c.MediaType, hf.dstb.BundleOnce(errCtx, &c, snapRef, &layers, &layersMu, config, pw))
+		fetchErrs.Go(func() error {
+			defer fetchSem.Release(1)
+			return fmtErr(c.MediaType, remote.Fetch(ctx, c, snapRef, pw))
 		})
 	}
 
-	if err := errs.Wait(); err != nil {
+	if err := fetchErrs.Wait(); err != nil {
 		return oci.DescriptorEmptyJSON, err
 	}
 
-	if semErr != nil {
-		return oci.DescriptorEmptyJSON, fmt.Errorf("failed to acquire lock: %w", semErr)
+	if fetchSemErr != nil {
+		return oci.DescriptorEmptyJSON, fmt.Errorf("fetch artifact failed to acquire lock: %w", fetchSemErr)
 	}
 
 	if !fetchProgress.CheckAllCompleted() {
 		return oci.DescriptorEmptyJSON, fmt.Errorf("failed to fetch all layers")
+	}
+
+	bundleSem := semaphore.NewWeighted(int64(hf.concurrency))
+	bundleProgress := progress.NewProgress()
+	bundleErrs, bundleErrCtx := errgroup.WithContext(ctx)
+
+	var bundleSemErr error
+	for _, content := range contents {
+		c := content
+		if c.Size() == 0 {
+			continue
+		}
+
+		if c.Path == "" {
+			log.Logger.Warnf("bundle file path is null: %s", c.MediaType)
+			continue
+		}
+
+		if err := openfile(filepath.Join(snapRef, c.Path), &c); err != nil {
+			return oci.DescriptorEmptyJSON, err
+		}
+
+		if err := bundleSem.Acquire(bundleErrCtx, 1); err != nil {
+			bundleSemErr = err
+			break
+		}
+
+		pw := progress.NewProgressWriter(plog, tools.ActionBundling, c.Metadata.Name, c.Metadata.Size)
+		bundleProgress.Add(pw)
+
+		log.Logger.Debugf("[tool: %s] start bundle for: %s, %+v, %+v", Name, c.Path, c, c.Metadata)
+
+		bundleErrs.Go(func() error {
+			defer bundleSem.Release(1)
+			return fmtErr(c.MediaType, hf.dstb.BundleOnce(bundleErrCtx, &c, "", &layers, &layersMu, config, pw))
+		})
+	}
+
+	if err := bundleErrs.Wait(); err != nil {
+		return oci.DescriptorEmptyJSON, err
+	}
+
+	if bundleSemErr != nil {
+		return oci.DescriptorEmptyJSON, fmt.Errorf("failed to acquire lock: %w", bundleSemErr)
+	}
+
+	if !bundleProgress.CheckAllCompleted() {
+		return oci.DescriptorEmptyJSON, fmt.Errorf("failed to bundle all layers")
 	}
 
 	config.Created = utils.TimePtr(time.Now())

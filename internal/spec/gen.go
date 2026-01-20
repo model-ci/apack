@@ -84,6 +84,7 @@ func Gen(dir *Directory, a *Artifact) (*Artifact, error) {
 		if strings.HasPrefix(strings.ToLower(file.Name), "readme") {
 			log.Logger.Infof("Found readme file '%s'", file.Name)
 			artifact.Package.Docs = append(artifact.Package.Docs, Doc{
+				ID:          file.ID,
 				Path:        file.Name,
 				Size:        file.Size,
 				Description: "Readme file",
@@ -92,6 +93,7 @@ func Gen(dir *Directory, a *Artifact) (*Artifact, error) {
 		} else if strings.HasPrefix(strings.ToLower(file.Name), "license") {
 			log.Logger.Infof("Found license file '%s'", file.Name)
 			artifact.Package.Docs = append(artifact.Package.Docs, Doc{
+				ID:          file.ID,
 				Path:        file.Name,
 				Size:        file.Size,
 				Description: "License file",
@@ -113,9 +115,9 @@ func Gen(dir *Directory, a *Artifact) (*Artifact, error) {
 			log.Logger.Infof("Detected config file '%s'", file.Path)
 			configFiles = append(configFiles, file)
 		case FileTypeDocs:
-			artifact.Package.Docs = append(artifact.Package.Docs, Doc{Path: file.Path, Size: file.Size})
+			artifact.Package.Docs = append(artifact.Package.Docs, Doc{ID: file.ID, Path: file.Path, Size: file.Size})
 		case FileTypeDataset:
-			artifact.Package.DataSets = append(artifact.Package.DataSets, DataSet{Path: file.Path, Size: file.Size})
+			artifact.Package.DataSets = append(artifact.Package.DataSets, DataSet{ID: file.ID, Path: file.Path, Size: file.Size})
 		default:
 			log.Logger.Infof("File %s is either code or unknown type. Will be added as a catch-all section", file.Path)
 			includeCatchallSection = true
@@ -138,12 +140,12 @@ func Gen(dir *Directory, a *Artifact) (*Artifact, error) {
 		}
 		log.Logger.Info("Adding config files as model parts")
 		for _, configFile := range configFiles {
-			artifact.Package.Models = append(artifact.Package.Models, Model{Path: configFile.Path, Size: configFile.Size})
+			artifact.Package.Models = append(artifact.Package.Models, Model{ID: configFile.ID, Path: configFile.Path, Size: configFile.Size})
 		}
 	} else {
 		log.Logger.Info("No model detected; adding config files as dataset layers")
 		for _, configFile := range configFiles {
-			artifact.Package.DataSets = append(artifact.Package.DataSets, DataSet{Path: configFile.Path, Size: configFile.Size})
+			artifact.Package.DataSets = append(artifact.Package.DataSets, DataSet{ID: configFile.ID, Path: configFile.Path, Size: configFile.Size})
 		}
 	}
 
@@ -354,7 +356,7 @@ func addModelToArtifact(artifact *Artifact, files []File) error {
 	}
 
 	for _, file := range files {
-		artifact.Package.Models = append(artifact.Package.Models, Model{Path: file.Path, Size: file.Size})
+		artifact.Package.Models = append(artifact.Package.Models, Model{ID: file.ID, Path: file.Path, Size: file.Size})
 	}
 
 	return nil
@@ -421,11 +423,11 @@ func genDirFromPath(curDir, contextDir string) (*Directory, error) {
 		t := dirEntry.Type()
 		switch {
 		case t.IsDir():
-			dirListing, err := genDirFromPath(relPath, contextDir)
+			dir, err := genDirFromPath(relPath, contextDir)
 			if err != nil {
 				return nil, err
 			}
-			result.Subdirs = append(result.Subdirs, *dirListing)
+			result.Subdirs = append(result.Subdirs, *dir)
 		case t.IsRegular():
 			info, err := dirEntry.Info()
 			if err != nil {

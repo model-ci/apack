@@ -41,7 +41,7 @@ func (m *makefile) Contents(ctx context.Context) ([]distribution.Content, error)
 			mediaType = spec.CompatibleOCIDetermineMediaType(m.algo)
 		}
 		artifactType := spec.InferMediaType(model.Path, m.algo)
-		c, err := m.buildContent(ctx, mediaType, artifactType, model.Path, model.Size)
+		c, err := m.buildContent(ctx, mediaType, artifactType, model.ID, model.Path, model.Size)
 		if err != nil {
 			return nil, err
 		}
@@ -54,7 +54,7 @@ func (m *makefile) Contents(ctx context.Context) ([]distribution.Content, error)
 			mediaType = spec.CompatibleOCIDetermineMediaType(m.algo)
 		}
 		artifactType := spec.DetermineMediaType(spec.FileTypeDataset, m.algo)
-		c, err := m.buildContent(ctx, mediaType, artifactType, datasets.Path, datasets.Size)
+		c, err := m.buildContent(ctx, mediaType, artifactType, datasets.ID, datasets.Path, datasets.Size)
 		if err != nil {
 			return nil, err
 		}
@@ -81,7 +81,7 @@ func (m *makefile) Contents(ctx context.Context) ([]distribution.Content, error)
 			mediaType = spec.CompatibleOCIDetermineMediaType(m.algo)
 		}
 		artifactType := spec.DetermineMediaType(spec.FileTypeDocs, m.algo)
-		c, err := m.buildContent(ctx, mediaType, artifactType, doc.Path, doc.Size)
+		c, err := m.buildContent(ctx, mediaType, artifactType, doc.ID, doc.Path, doc.Size)
 		if err != nil {
 			return nil, err
 		}
@@ -91,15 +91,15 @@ func (m *makefile) Contents(ctx context.Context) ([]distribution.Content, error)
 	return contents, nil
 }
 
-func (m *makefile) buildContent(ctx context.Context, mediaType, artifactType string, filename string, size int64) (*distribution.Content, error) {
+func (m *makefile) buildContent(ctx context.Context, mediaType, artifactType string, id, filename string, size int64) (*distribution.Content, error) {
 	metadata := &distribution.FileMetadata{}
 	metadata.Name = filename
 	metadata.Size = size
 	return &distribution.Content{
+		ID:           id,
 		Path:         filename,
 		MediaType:    mediaType,
 		ArtifactType: artifactType,
-		Overload:     m.Fetch,
 		Metadata:     metadata,
 	}, nil
 }

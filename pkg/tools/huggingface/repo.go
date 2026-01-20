@@ -5,16 +5,20 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
+	"os"
+	"path/filepath"
 	"time"
 
 	"github.com/model-ci/apack/internal/log"
+	"github.com/model-ci/apack/internal/utils"
 	"github.com/model-ci/apack/pkg/distribution"
 	"github.com/model-ci/apack/pkg/layerdb"
+	"github.com/model-ci/apack/pkg/progress"
 )
 
 type Repository interface {
 	Resolve(ctx context.Context, reference string) (distribution.Makefile, error)
-	Fetch(ctx context.Context, c *distribution.Content) error
+	Fetch(ctx context.Context, c distribution.Content, snappath string, pw *progress.ProgressWriter) error
 }
 
 type huggingFaceRepo struct {
@@ -58,26 +62,30 @@ func (r *huggingFaceRepo) Resolve(ctx context.Context, reference string) (distri
 	return NewMakefile(*artifact, reference, r.argo, r, true), nil
 }
 
-func (r *huggingFaceRepo) Fetch(ctx context.Context, c *distribution.Content) error {
+func (r *huggingFaceRepo) Fetch(ctx context.Context, c distribution.Content, snapdir string, pw *progress.ProgressWriter) error {
 	url := fmt.Sprintf(ResolveURL, r.endpoint, r.repo, r.branch, c.Path)
+
 	log.Logger.Debugf("Fetching from %s", url)
 
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
-	if err != nil {
-		return fmt.Errorf("failed to resolve URL: %w", err)
-	}
-	if r.token != "" {
-		req.Header.Add("Authorization", fmt.Sprintf("Bearer %s", r.token))
-	}
-	resp, err := r.client.Do(req)
-	if err != nil {
-		return fmt.Errorf("error calling API: %w", err)
+	tmpfile := filepath.Join(snapdir, c.ID)
+	realfile := filepath.Join(snapdir, c.Path)
+
+	if utils.FileExist(realfile) {
+		log.Logger.Warnf("File already exists: %s", realfile)
+		pw.MarkCompleted()
+		return nil
 	}
 
-	if resp.StatusCode != http.StatusOK {
-		return fmt.Errorf("received status code %d when downloading file %s from %s", resp.StatusCode, c.Path, url)
+	if utils.FileExist(tmpfile) {
+		log.Logger.Warnf("File already exists: %s, need to rename it to %s", tmpfile, realfile)
+		pw.MarkCompleted()
+		return os.Rename(tmpfile, realfile)
 	}
 
-	c.ReadCloser = resp.Body
-	return nil
+	dl := NewDownloader(url, tmpfile, c.Size(), pw)
+	if err := dl.Start(ctx); err != nil {
+		return fmt.Errorf("failed to download file: %w", err)
+	}
+
+	return os.Rename(tmpfile, realfile)
 }

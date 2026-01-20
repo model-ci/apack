@@ -125,7 +125,7 @@ func easyjson4ca8a529DecodeGithubComModelCiApackInternalSpec(in *jlexer.Lexer, o
 				in.Delim('[')
 				if out.Codes == nil {
 					if !in.IsDelim(']') {
-						out.Codes = make([]Code, 0, 1)
+						out.Codes = make([]Code, 0, 0)
 					} else {
 						out.Codes = []Code{}
 					}
@@ -1137,6 +1137,12 @@ func easyjson4ca8a529DecodeGithubComModelCiApackInternalSpec2(in *jlexer.Lexer, 
 		key := in.UnsafeFieldName(false)
 		in.WantColon()
 		switch key {
+		case "id":
+			if in.IsNull() {
+				in.Skip()
+			} else {
+				out.ID = string(in.String())
+			}
 		case "name":
 			if in.IsNull() {
 				in.Skip()
@@ -1195,10 +1201,20 @@ func easyjson4ca8a529EncodeGithubComModelCiApackInternalSpec2(out *jwriter.Write
 	out.RawByte('{')
 	first := true
 	_ = first
-	if in.Name != "" {
-		const prefix string = ",\"name\":"
+	if in.ID != "" {
+		const prefix string = ",\"id\":"
 		first = false
 		out.RawString(prefix[1:])
+		out.String(string(in.ID))
+	}
+	if in.Name != "" {
+		const prefix string = ",\"name\":"
+		if first {
+			first = false
+			out.RawString(prefix[1:])
+		} else {
+			out.RawString(prefix)
+		}
 		out.String(string(in.Name))
 	}
 	if in.Type != "" {
@@ -1307,6 +1323,12 @@ func easyjson4ca8a529DecodeGithubComModelCiApackInternalSpec3(in *jlexer.Lexer, 
 		key := in.UnsafeFieldName(false)
 		in.WantColon()
 		switch key {
+		case "id":
+			if in.IsNull() {
+				in.Skip()
+			} else {
+				out.ID = string(in.String())
+			}
 		case "path":
 			if in.IsNull() {
 				in.Skip()
@@ -1339,9 +1361,20 @@ func easyjson4ca8a529EncodeGithubComModelCiApackInternalSpec3(out *jwriter.Write
 	out.RawByte('{')
 	first := true
 	_ = first
+	if in.ID != "" {
+		const prefix string = ",\"id\":"
+		first = false
+		out.RawString(prefix[1:])
+		out.String(string(in.ID))
+	}
 	{
 		const prefix string = ",\"path\":"
-		out.RawString(prefix[1:])
+		if first {
+			first = false
+			out.RawString(prefix[1:])
+		} else {
+			out.RawString(prefix)
+		}
 		out.String(string(in.Path))
 	}
 	{
@@ -1394,6 +1427,12 @@ func easyjson4ca8a529DecodeGithubComModelCiApackInternalSpec4(in *jlexer.Lexer, 
 		key := in.UnsafeFieldName(false)
 		in.WantColon()
 		switch key {
+		case "id":
+			if in.IsNull() {
+				in.Skip()
+			} else {
+				out.ID = string(in.String())
+			}
 		case "name":
 			if in.IsNull() {
 				in.Skip()
@@ -1446,10 +1485,20 @@ func easyjson4ca8a529EncodeGithubComModelCiApackInternalSpec4(out *jwriter.Write
 	out.RawByte('{')
 	first := true
 	_ = first
-	if in.Name != "" {
-		const prefix string = ",\"name\":"
+	if in.ID != "" {
+		const prefix string = ",\"id\":"
 		first = false
 		out.RawString(prefix[1:])
+		out.String(string(in.ID))
+	}
+	if in.Name != "" {
+		const prefix string = ",\"name\":"
+		if first {
+			first = false
+			out.RawString(prefix[1:])
+		} else {
+			out.RawString(prefix)
+		}
 		out.String(string(in.Name))
 	}
 	if in.Path != "" {
@@ -1548,6 +1597,12 @@ func easyjson4ca8a529DecodeGithubComModelCiApackInternalSpec5(in *jlexer.Lexer, 
 		key := in.UnsafeFieldName(false)
 		in.WantColon()
 		switch key {
+		case "id":
+			if in.IsNull() {
+				in.Skip()
+			} else {
+				out.ID = string(in.String())
+			}
 		case "path":
 			if in.IsNull() {
 				in.Skip()
@@ -1586,10 +1641,20 @@ func easyjson4ca8a529EncodeGithubComModelCiApackInternalSpec5(out *jwriter.Write
 	out.RawByte('{')
 	first := true
 	_ = first
-	if in.Path != "" {
-		const prefix string = ",\"path\":"
+	if in.ID != "" {
+		const prefix string = ",\"id\":"
 		first = false
 		out.RawString(prefix[1:])
+		out.String(string(in.ID))
+	}
+	if in.Path != "" {
+		const prefix string = ",\"path\":"
+		if first {
+			first = false
+			out.RawString(prefix[1:])
+		} else {
+			out.RawString(prefix)
+		}
 		out.String(string(in.Path))
 	}
 	if in.Size != 0 {

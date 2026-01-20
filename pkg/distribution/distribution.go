@@ -38,11 +38,11 @@ type Distribution interface {
 type Content struct {
 	io.ReadCloser
 
+	ID           string
 	Path         string
 	MediaType    string
 	ArtifactType string
 	Metadata     *FileMetadata
-	Overload     func(context.Context, *Content) error
 }
 
 func (c *Content) Name() string {

@@ -11,7 +11,8 @@ import (
 )
 
 const (
-	ActionFetch = "Fetching"
+	ActionFetch    = "Fetching"
+	ActionBundling = "Bundling"
 )
 
 type Tool interface {
