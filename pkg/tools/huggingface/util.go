@@ -37,6 +37,6 @@ func openfile(path string, c *distribution.Content) error {
 	if err != nil {
 		return err
 	}
-	
-	return c.Metadata.Fill(fi)
+
+	return c.Metadata.FillWithRename(fi, c.Path)
 }

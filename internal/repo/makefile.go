@@ -10,6 +10,7 @@ import (
 	"github.com/model-ci/apack/internal/utils"
 	"github.com/model-ci/apack/pkg/distribution"
 	"github.com/model-ci/apack/pkg/layerdb"
+	"github.com/opencontainers/go-digest"
 	modelspec "github.com/modelpack/model-spec/specs-go/v1"
 )
 
@@ -112,6 +113,12 @@ func (m *makefile) buildContent(mediaType, artifactType string, filename string)
 		return nil, err
 	}
 	c.ReadCloser = f
+
+	dgt, err := digest.FromReader(f)
+	if err != nil {
+		return nil, err
+	}
+	c.ID = dgt.Encoded()
 
 	return c, c.Metadata.Fill(fi)
 }

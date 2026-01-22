@@ -49,25 +49,21 @@ func (lo *Logout) Decode(rr io.Reader) error {
 	return decoder(rr, lo)
 }
 
-type Params struct {
+type Args struct {
 	Overwrite bool
 	Algo      layerdb.Algorithm
 	Output    string
 	TargetRef registry.Reference
-}
-
-type Import struct {
-	User     string
-	Password string
-	Tool     string
-	Endpoint string
-	Repo     string
-	Branch   string
+	User      string
+	Password  string
+	Tool      string
+	Endpoint  string
+	Repo      string
+	Branch    string
 }
 
 type Request struct {
-	Params
-	Import
+	Args
 
 	ID           string
 	ReferenceStr string

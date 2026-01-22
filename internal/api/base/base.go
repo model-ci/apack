@@ -270,7 +270,7 @@ func (b *BaseAPI) handleTag(w http.ResponseWriter, req *http.Request, params htt
 		return
 	}
 
-	if tag.Params.TargetRef.String() == "" {
+	if tag.Args.TargetRef.String() == "" {
 		utils.WriteError(w, "TAG", "target_ref is nil", http.StatusInternalServerError)
 		return
 	}

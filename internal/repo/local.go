@@ -226,8 +226,23 @@ func (l *local) pushLayer(ctx context.Context, ref string, remote registry.Repos
 	filename, ok := desc.Annotations[modelspec.AnnotationFilepath]
 	if ok {
 		snapref := l.Snaplink(ctx, ref)
-		snapfile := filepath.Join(snapref, filename)
-		f, err := os.Open(snapfile)
+		artifact := spec.Artifact{}
+		err := artifact.UnmarshalYamlFromPath(snapref)
+		if err != nil {
+			return err
+		}
+
+		diffid := artifact.FindDiffid(filename)
+		if diffid == spec.Nil {
+			return fmt.Errorf("diffid not found for %s", filename)
+		}
+
+		diff, err := l.Snapdiff(ctx)
+		if err != nil {
+			return err
+		}
+
+		f, err := os.Open(filepath.Join(diff, diffid))
 		if err != nil {
 			return err
 		}
@@ -237,7 +252,17 @@ func (l *local) pushLayer(ctx context.Context, ref string, remote registry.Repos
 			return err
 		}
 
-		content, cerr = l.db.Contenting(ctx, desc.MediaType, layerdb.NewFile(fi, f), nil)
+		c := distribution.Content{
+			ReadCloser: f,
+			Metadata: &distribution.FileMetadata{},
+		}
+
+		err = c.Metadata.FillWithRename(fi, filename)
+		if err != nil {
+			return err
+		}
+
+		content, cerr = l.db.Contenting(ctx, desc.MediaType, &c, nil)
 	} else {
 		content, err = l.db.Read(ctx, desc)
 		if err != nil {
@@ -284,6 +309,11 @@ func (l *local) Bundle(ctx context.Context, mf distribution.Makefile, plog *prog
 		return fmt.Errorf("failed to bundle %s layer: %w", mediaType, err)
 	}
 
+	snapDiff, err := l.Snapdiff(ctx)
+	if err != nil {
+		return oci.DescriptorEmptyJSON, err
+	}
+
 	snapRef, err := l.Snapshot(ctx, mf.Reference())
 	if err != nil {
 		return oci.DescriptorEmptyJSON, err
@@ -302,12 +332,17 @@ func (l *local) Bundle(ctx context.Context, mf distribution.Makefile, plog *prog
 			break
 		}
 
+		snapPtr := snapDiff
+		if utils.FileExist(filepath.Join(snapDiff, c.ID)) {
+			snapPtr = ""
+		}
+
 		pw := progress.NewProgressWriter(plog, task.ActionBundle, c.Metadata.Name, c.Metadata.Size)
 		bundleProgress.Add(pw)
 
 		errs.Go(func() error {
 			defer sem.Release(1)
-			return fmtErr(c.MediaType, l.bundleLayer(errCtx, &c, snapRef, &layers, &layersMu, config, pw))
+			return fmtErr(c.MediaType, l.bundleLayer(errCtx, &c, snapPtr, &layers, &layersMu, config, pw))
 		})
 	}
 
@@ -330,7 +365,13 @@ func (l *local) Bundle(ctx context.Context, mf distribution.Makefile, plog *prog
 		return oci.DescriptorEmptyJSON, err
 	}
 
-	artifactBytes, err := mf.Artifact().MarshalJSON()
+	artifact := mf.Artifact()
+	err = artifact.MarshalYAMLToPath(snapRef)
+	if err != nil {
+		return oci.DescriptorEmptyJSON, err
+	}
+
+	artifactBytes, err := artifact.MarshalJSON()
 	if err != nil {
 		return oci.DescriptorEmptyJSON, err
 	}
@@ -375,6 +416,7 @@ func (l *local) bundleLayer(ctx context.Context, content *distribution.Content, 
 	var err error
 
 	if snapref != "" {
+		snapdiff := filepath.Join(snapref, content.ID)
 		snapname := filepath.Join(snapref, filename)
 		snap, err := os.Create(snapname)
 		if err != nil {
@@ -382,6 +424,11 @@ func (l *local) bundleLayer(ctx context.Context, content *distribution.Content, 
 		}
 
 		layer, dgt, err = l.db.Layering(ctx, content.MediaType, content, snap, pw)
+		if err != nil {
+			return err
+		}
+
+		err = os.Rename(snapname, snapdiff)
 		if err != nil {
 			return err
 		}
@@ -409,6 +456,71 @@ func (l *local) bundleLayer(ctx context.Context, content *distribution.Content, 
 
 	pw.MarkCompleted()
 
+	return nil
+}
+
+func (l *local) Sink(ctx context.Context, dir string, reference string, plog *progress.Logger, opts *distribution.Options) error {
+	manifest, _, err := l.db.Manifest(ctx, reference)
+	if err != nil {
+		return err
+	}
+
+	snapRef, err := l.Snapshot(ctx, reference)
+	if err != nil {
+		return err
+	}
+
+	sem := semaphore.NewWeighted(int64(opts.Concurrency))
+	sinkProgress := progress.NewProgress()
+	errs, errCtx := errgroup.WithContext(ctx)
+	fmtErr := func(desc oci.Descriptor, err error) error {
+		if err == nil {
+			return nil
+		}
+		return fmt.Errorf("failed to sink %s layer: %w", desc.MediaType, err)
+	}
+	var semErr error
+	sinkedDigests := map[string]bool{}
+
+	for _, layer := range manifest.Layers {
+		layerDesc := layer
+		digest := layerDesc.Digest.String()
+		if sinkedDigests[digest] {
+			continue
+		}
+		sinkedDigests[digest] = true
+		if err := sem.Acquire(errCtx, 1); err != nil {
+			semErr = err
+			break
+		}
+
+		filename := layerDesc.Annotations[modelspec.AnnotationFilepath]
+		pw := progress.NewProgressWriter(plog, task.ActionExtract, filename, layerDesc.Size)
+		sinkProgress.Add(pw)
+
+		errs.Go(func() error {
+			defer sem.Release(1)
+			return fmtErr(layerDesc,
+				l.sinkLayers(errCtx, layerDesc, snapRef, dir, pw))
+		})
+	}
+
+	if err := errs.Wait(); err != nil {
+		return err
+	}
+
+	if semErr != nil {
+		return fmt.Errorf("failed to acquire lock: %w", semErr)
+	}
+
+	if !sinkProgress.CheckAllCompleted() {
+		return fmt.Errorf("failed to extract all layers")
+	}
+
+	return nil
+}
+
+func (l *local) sinkLayers(ctx context.Context, desc oci.Descriptor, snapref, dir string, pw *progress.ProgressWriter) error {
 	return nil
 }
 
@@ -619,6 +731,10 @@ func (l *local) Statuses(ctx context.Context) ([]oci.Descriptor, error) {
 	return descs, nil
 }
 
+func (l *local) Snapdiff(ctx context.Context) (string, error) {
+	return l.snapdir(ctx, "diff")
+}
+
 func (l *local) Snappath(ctx context.Context, reference string) string {
 	return filepath.Join(l.snapPath, reference)
 }
@@ -632,10 +748,18 @@ func (l *local) Snaplink(ctx context.Context, reference string) string {
 	return refpath
 }
 
-func (l *local) Snapshot(ctx context.Context, reference string) (string, error) {
+func (l *local) snapdir(ctx context.Context, reference string) (string, error) {
 	dir := filepath.Join(l.snapPath, reference)
 	if err := os.MkdirAll(dir, 0755); err != nil {
-		return "", fmt.Errorf("failed to create directories: %w", err)
+		return "", fmt.Errorf("failed to create snap directories: %w", err)
+	}
+	return dir, nil
+}
+
+func (l *local) Snapshot(ctx context.Context, reference string) (string, error) {
+	dir, err := l.snapdir(ctx, reference)
+	if err != nil {
+		return "", err
 	}
 	return dir, l.db.Snap(ctx, reference)
 }

@@ -95,7 +95,7 @@ func (e *export) completeAndValidate() error {
 }
 
 func (e *export) Run() error {
-	params := types.Params{
+	args := types.Args{
 		Output:    e.Output,
 		Overwrite: e.Overwrite,
 	}
@@ -103,7 +103,7 @@ func (e *export) Run() error {
 	req := &types.Request{
 		Reference:    e.Reference,
 		ReferenceStr: e.Reference.String(),
-		Params:       params,
+		Args:         args,
 	}
 
 	resp, err := e.client.Post(e.ctx, base.API("/v1/export"), req)

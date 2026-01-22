@@ -90,6 +90,11 @@ func (hf *Huggingface) Fetch(ctx context.Context, reference string, path string,
 		return fmt.Errorf("[tool: %s] failed to %s layer: %w", Name, mediaType, err)
 	}
 
+	snapDiff, err := hf.dstb.Snapdiff(ctx)
+	if err != nil {
+		return oci.DescriptorEmptyJSON, err
+	}
+
 	snapRef, err := hf.dstb.Snapshot(ctx, reference)
 	if err != nil {
 		return oci.DescriptorEmptyJSON, err
@@ -120,7 +125,7 @@ func (hf *Huggingface) Fetch(ctx context.Context, reference string, path string,
 
 		fetchErrs.Go(func() error {
 			defer fetchSem.Release(1)
-			return fmtErr(c.MediaType, remote.Fetch(ctx, c, snapRef, pw))
+			return fmtErr(c.MediaType, remote.Fetch(ctx, c, snapDiff, pw))
 		})
 	}
 
@@ -152,7 +157,7 @@ func (hf *Huggingface) Fetch(ctx context.Context, reference string, path string,
 			continue
 		}
 
-		if err := openfile(filepath.Join(snapRef, c.Path), &c); err != nil {
+		if err := openfile(filepath.Join(snapDiff, c.ID), &c); err != nil {
 			return oci.DescriptorEmptyJSON, err
 		}
 
@@ -191,7 +196,13 @@ func (hf *Huggingface) Fetch(ctx context.Context, reference string, path string,
 		return oci.DescriptorEmptyJSON, err
 	}
 
-	artifactBytes, err := mf.Artifact().MarshalJSON()
+	artifact := mf.Artifact()
+	err = artifact.MarshalYAMLToPath(snapRef)
+	if err != nil {
+		return oci.DescriptorEmptyJSON, err
+	}
+
+	artifactBytes, err := artifact.MarshalJSON()
 	if err != nil {
 		return oci.DescriptorEmptyJSON, err
 	}

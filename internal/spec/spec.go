@@ -4,6 +4,7 @@ package spec
 import (
 	"io"
 	"os"
+	"path/filepath"
 
 	"github.com/goccy/go-yaml"
 	modelspec "github.com/modelpack/model-spec/specs-go/v1"
@@ -12,6 +13,7 @@ import (
 const (
 	DefaultArtifactName = "Apackfile"
 	IgnoreFileName      = ".apackignore"
+	Nil = "nil"
 )
 
 type Artifact struct {
@@ -89,6 +91,25 @@ func (a *Artifact) MarshalToYAML() ([]byte, error) {
 	return yaml.Marshal(a)
 }
 
+func (a *Artifact) MarshalYAMLToPath(path string) error {
+	if err := os.MkdirAll(path, 0755); err != nil {
+		return err
+	}
+
+	b, err := a.MarshalToYAML()
+	if err != nil {
+		return err
+	}
+
+	filename := filepath.Join(path, DefaultArtifactName)
+	return os.WriteFile(filename, b, 0644)
+}
+
+func (a *Artifact) UnmarshalYamlFromPath(path string) error {
+	filename := filepath.Join(path, DefaultArtifactName)
+	return a.UnmarshalYamlFile(filename)
+}
+
 func (a *Artifact) UnmarshalYamlFile(path string) error {
 	b, err := os.ReadFile(path)
 	if err != nil {
@@ -104,4 +125,26 @@ func (a *Artifact) UnmarshalJSONFromIO(rr io.Reader) error {
 	}
 
 	return a.UnmarshalJSON(b)
+}
+
+func (a *Artifact) FindDiffid(filename string) string {
+	for _, model := range a.Package.Models {
+		if model.Path == filename {
+			return model.ID
+		}
+	}
+
+	for _, dataset := range a.Package.DataSets {
+		if dataset.Path == filename {
+			return dataset.ID
+		}
+	}
+
+	for _, doc := range a.Package.Docs {
+		if doc.Path == filename {
+			return doc.ID
+		}
+	}
+
+	return Nil
 }

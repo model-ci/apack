@@ -170,17 +170,17 @@ func (p *build) completeAndValidate() error {
 }
 
 func (p *build) Run() error {
-	params := types.Params{
+	args := types.Args{
 		Algo: layerdb.None,
 	}
 
 	if p.Compress {
-		params.Algo = layerdb.Gzip
+		args.Algo = layerdb.Gzip
 	}
 
 	req := types.Request{
 		Reference: p.Reference,
-		Params:    params,
+		Args:      args,
 	}
 
 	if err := req.Artifact.UnmarshalYamlFile(p.apackfile); err != nil {

@@ -156,7 +156,7 @@ func ReadLinkFile(dirPath string) (string, error) {
 
 	content, err := os.ReadFile(targetPath)
 	if err != nil {
-		return "", fmt.Errorf("failed to read file: %w", err)
+		return "", fmt.Errorf("failed to read link file: %w", err)
 	}
 
 	return string(content), nil

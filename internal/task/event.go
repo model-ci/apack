@@ -31,6 +31,7 @@ const (
 	ActionPush    ActionType = "Uploading"
 	ActionBundle  ActionType = "Copying"
 	ActionExtract ActionType = "Saving"
+	ActionSink    ActionType = "Outputting"
 )
 
 //easyjson:json

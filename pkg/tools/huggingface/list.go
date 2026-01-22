@@ -14,10 +14,17 @@ import (
 )
 
 type hfTreeResponse []struct {
-	Type string `json:"type"`
-	OID  string `json:"oid"`
-	Size int64  `json:"size"`
-	Path string `json:"path"`
+	Type string    `json:"type"`
+	OID  string    `json:"oid"`
+	Size int64     `json:"size"`
+	LFS  hfTreeLFS `json:"lfs,omitempty"`
+	Path string    `json:"path"`
+}
+
+type hfTreeLFS struct {
+	OID         string `json:"oid"`
+	Size        int64  `json:"size"`
+	PointerSize int64  `json:"pointerSize"`
 }
 
 type hfErrorResponse struct {
@@ -67,9 +74,13 @@ func walkRepoTree(ctx context.Context, client *http.Client, token string, repoBa
 			if name == ".gitignore" || name == ".gitattributes" {
 				continue
 			}
+			oid := elem.OID
+			if elem.LFS.OID != "" {
+				oid = elem.LFS.OID
+			}
 			dir.Files = append(dir.Files, spec.File{
 				Name: name,
-				ID:   elem.OID,
+				ID:   oid,
 				Path: elem.Path,
 				Size: elem.Size,
 			})

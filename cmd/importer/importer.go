@@ -163,7 +163,7 @@ func (i *Importer) completeAndValidate() error {
 
 func (i *Importer) Run() error {
 	req := types.Request{
-		Import: types.Import{
+		Args: types.Args{
 			User:     i.username,
 			Password: i.password,
 			Tool:     i.tools,

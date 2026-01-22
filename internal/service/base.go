@@ -29,10 +29,11 @@ type BaseService struct {
 	path         string
 	manager      *task.Manager
 	distribution distribution.Distribution
-	runtime      runtime.Runtime
-	logger       *zap.SugaredLogger
-	config       *Config
-	tools        *tools.Tools
+
+	runtime runtime.Runtime
+	logger  *zap.SugaredLogger
+	config  *Config
+	tools   *tools.Tools
 }
 
 func NewBaseService(path string, m *task.Manager, config *Config) (*BaseService, error) {
@@ -45,10 +46,12 @@ func NewBaseService(path string, m *task.Manager, config *Config) (*BaseService,
 	if err != nil {
 		return nil, err
 	}
-	rt, err := runtime.New(d, path)
-	if err != nil {
-		return nil, err
-	}
+	/*
+		rt, err := runtime.New(d, path)
+		if err != nil {
+			return nil, err
+		}
+	*/
 
 	t, err := tools.NewTools(db, d, config.Concurrency)
 	if err != nil {
@@ -58,7 +61,7 @@ func NewBaseService(path string, m *task.Manager, config *Config) (*BaseService,
 	return &BaseService{
 		path:         path,
 		distribution: d,
-		runtime:      rt,
+		runtime:      nil,
 		manager:      m,
 		config:       config,
 		tools:        t,
@@ -131,7 +134,7 @@ func (b *BaseService) Build(ctx context.Context, req *types.Request) (*types.Res
 }
 
 func (b *BaseService) Tag(ctx context.Context, req *types.Request) (*types.Response, error) {
-	err := b.distribution.Tag(ctx, req.Reference, req.Params.TargetRef)
+	err := b.distribution.Tag(ctx, req.Reference, req.Args.TargetRef)
 	if err != nil {
 		return nil, err
 	}

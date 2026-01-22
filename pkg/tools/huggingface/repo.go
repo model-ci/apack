@@ -5,11 +5,11 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
-	"os"
 	"path/filepath"
 	"time"
 
 	"github.com/model-ci/apack/internal/log"
+	"github.com/model-ci/apack/internal/transfer"
 	"github.com/model-ci/apack/internal/utils"
 	"github.com/model-ci/apack/pkg/distribution"
 	"github.com/model-ci/apack/pkg/layerdb"
@@ -67,25 +67,17 @@ func (r *huggingFaceRepo) Fetch(ctx context.Context, c distribution.Content, sna
 
 	log.Logger.Debugf("Fetching from %s", url)
 
-	tmpfile := filepath.Join(snapdir, c.ID)
-	realfile := filepath.Join(snapdir, c.Path)
-
-	if utils.FileExist(realfile) {
-		log.Logger.Warnf("File already exists: %s", realfile)
+	diffid := filepath.Join(snapdir, c.ID)
+	if utils.FileExist(diffid) {
+		log.Logger.Warnf("Diff file already exists: %s", diffid)
 		pw.MarkCompleted()
 		return nil
 	}
 
-	if utils.FileExist(tmpfile) {
-		log.Logger.Warnf("File already exists: %s, need to rename it to %s", tmpfile, realfile)
-		pw.MarkCompleted()
-		return os.Rename(tmpfile, realfile)
-	}
-
-	dl := NewDownloader(url, tmpfile, c.Size(), pw)
+	dl := transfer.NewDownloader(url, diffid, c.Size(), pw)
 	if err := dl.Start(ctx); err != nil {
 		return fmt.Errorf("failed to download file: %w", err)
 	}
 
-	return os.Rename(tmpfile, realfile)
+	return nil
 }

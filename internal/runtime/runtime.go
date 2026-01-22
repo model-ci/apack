@@ -2,38 +2,30 @@ package runtime
 
 import (
 	"context"
-	"fmt"
-	"path/filepath"
-	"time"
 
-	"github.com/model-ci/apack/internal/log"
-	"github.com/model-ci/apack/pkg/distribution"
-
-	"github.com/model-ci/apack/pkg/infer"
-	infercfg "github.com/model-ci/apack/pkg/infer/llama/config"
-	infertyp "github.com/model-ci/apack/pkg/infer/llama/types"
-	"github.com/model-ci/apack/pkg/infer/llama/utils"
-	"github.com/model-ci/apack/pkg/layerdb"
 	"github.com/model-ci/apack/pkg/progress"
 )
 
-type runtime struct {
-	distribution.Distribution
-	infer.Infer
-}
-
+/*
+	type runtime struct {
+		distribution.Distribution
+		//infer.Infer
+	}
+*/
 type Runtime interface {
 	Run(ctx context.Context, ref, path string, plog progress.Logger) error
 	Kill(ctx context.Context, id string) error
 	Ps(ctx context.Context) (*States, error)
 }
 
+/*
 func New(d distribution.Distribution, workspace string) (Runtime, error) {
 	client, err := infer.New(&infercfg.Config{
 		AutoRestart: true,
 		MaxRetries:  3,
 		BinaryPath:  filepath.Join(workspace, "runtime"),
 	})
+
 	if err != nil {
 		return nil, err
 	}
@@ -44,6 +36,7 @@ func New(d distribution.Distribution, workspace string) (Runtime, error) {
 	}
 
 	return rt, nil
+	return &runtime{}, nil
 }
 
 func (r *runtime) Run(ctx context.Context, ref, path string, plog progress.Logger) error {
@@ -52,70 +45,26 @@ func (r *runtime) Run(ctx context.Context, ref, path string, plog progress.Logge
 		return err
 	}
 
+	_ = modelPath
+
 	pp := &PortPair{}
 	if err := pp.GenPortPair(); err != nil {
 		return err
 	}
 
-	sc := &infercfg.ServerConfig{
-		ModelPath:      modelPath,
-		Host:           "0.0.0.0",
-		Port:           pp.Port2,
-		ContextSize:    16384,
-		GPULayers:      -1,
-		Threads:        8,
-		StartTimeout:   5 * time.Minute,
-		RequestTimeout: 120 * time.Second,
-		LogLevel:       utils.LevelNames[utils.DEBUG],
-	}
-
-	ac := &infercfg.APIConfig{
-		Enabled:     true,
-		Port:        pp.Port1,
-		Title:       "ApackAI",
-		Theme:       "dark",
-		AuthEnabled: false,
-		Username:    "admin",
-		Password:    "nimda",
-	}
 
 	runner, desc, err := r.Infer.Create(sc, ac, ref)
 	if err != nil {
 		return err
 	}
 
-	runner.OnEvent(func(event infertyp.Event) {
-		switch event.Type {
-		case infertyp.EventStarted:
-			log.Logger.Infof("llama server is running: %s\n", event.Message)
-			if data, ok := event.Data.(map[string]interface{}); ok {
-				log.Logger.Infof("   model: %v\n", data["model"])
-				log.Logger.Infof("   endpoint: %v:%v\n", data["host"], data["port"])
-			}
-		case infertyp.EventError:
-			log.Logger.Infof("error: %s\n", event.Message)
-		case infertyp.EventUIStarted:
-			log.Logger.Infof("UI is running: %s\n", event.Message)
-			if data, ok := event.Data.(map[string]interface{}); ok {
-				log.Logger.Infof("   URL: %v\n", data["url"])
-			}
-		default:
-			log.Logger.Infof("event [%s]: %s\n", event.Type, event.Message)
-		}
-	})
-
 	defer func(cause error) {
 		if cause != nil {
 			runner.Stop()
-			runner.StopAPI()
 		}
 	}(err)
 
 	if err := runner.Start(ctx); err != nil {
-		return err
-	}
-
-	if err := runner.StartAPI(ctx); err != nil {
 		return err
 	}
 
@@ -245,3 +194,4 @@ func (r *runtime) Ps(ctx context.Context) (*States, error) {
 
 	return states, nil
 }
+*/

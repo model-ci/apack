@@ -1,4 +1,4 @@
-package huggingface
+package transfer
 
 import (
 	"context"

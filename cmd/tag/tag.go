@@ -95,7 +95,7 @@ func (t *Tag) completeAndValidate() error {
 
 func (t *Tag) Run() error {
 	req := types.Request{
-		Params: types.Params{
+		Args: types.Args{
 			TargetRef: t.dstRef,
 		},
 		ReferenceStr: t.srcRef.String(),

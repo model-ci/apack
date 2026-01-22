@@ -22,6 +22,7 @@ type Distribution interface {
 	Bundle(ctx context.Context, mf Makefile, log *progress.Logger, opts *Options) (oci.Descriptor, error)
 	BundleOnce(ctx context.Context, content *Content, snapref string, layers *[]oci.Descriptor, layersMu *sync.Mutex, config *layerdb.Config, pw *progress.ProgressWriter) error
 	Extract(ctx context.Context, path string, reference string, log *progress.Logger, opts *Options) error
+	Sink(ctx context.Context, dir string, reference string, plog *progress.Logger, opts *Options) error
 	Artifacts(ctx context.Context) ([]spec.Artifact, error)
 	Artifact(ctx context.Context, reference string) (spec.Artifact, error)
 	Manifest(ctx context.Context, reference string) (oci.Manifest, oci.Descriptor, error)
@@ -32,6 +33,7 @@ type Distribution interface {
 	Snapshot(ctx context.Context, reference string) (string, error)
 	Snappath(ctx context.Context, reference string) string
 	Snaplink(ctx context.Context, reference string) string
+	Snapdiff(ctx context.Context) (string, error)
 	Tag(ctx context.Context, ref1, ref2 registry.Reference) error
 }
 

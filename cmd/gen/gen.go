@@ -139,7 +139,7 @@ func (g *Gen) Run() error {
 		artifact.Package.Workspace = g.workspace
 	}
 
-	req := types.Request{Artifact: artifact, Params: types.Params{Overwrite: g.overwrite}}
+	req := types.Request{Artifact: artifact, Args: types.Args{Overwrite: g.overwrite}}
 
 	resp, err := g.client.Post(g.ctx, base.API("/v1/gen"), req)
 	if err != nil {
