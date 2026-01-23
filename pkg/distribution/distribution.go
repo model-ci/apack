@@ -32,7 +32,7 @@ type Distribution interface {
 	Statuses(ctx context.Context) ([]oci.Descriptor, error)
 	Snapshot(ctx context.Context, reference string) (string, error)
 	Snappath(ctx context.Context, reference string) string
-	Snaplink(ctx context.Context, reference string) string
+	Snaplink(ctx context.Context, reference string) (string, error)
 	Snapdiff(ctx context.Context) (string, error)
 	Tag(ctx context.Context, ref1, ref2 registry.Reference) error
 }

@@ -225,9 +225,13 @@ func (l *local) pushLayer(ctx context.Context, ref string, remote registry.Repos
 
 	filename, ok := desc.Annotations[modelspec.AnnotationFilepath]
 	if ok {
-		snapref := l.Snaplink(ctx, ref)
+		snapref, err := l.Snaplink(ctx, ref)
+		if err != nil {
+			return err
+		}
+
 		artifact := spec.Artifact{}
-		err := artifact.UnmarshalYamlFromPath(snapref)
+		err = artifact.UnmarshalYamlFromPath(snapref)
 		if err != nil {
 			return err
 		}
@@ -423,6 +427,8 @@ func (l *local) bundleLayer(ctx context.Context, content *distribution.Content, 
 			return err
 		}
 
+		log.Logger.Debugf("create snapshot file: %s, diff: %s, content: %+v", snapname, snapdiff, content)
+
 		layer, dgt, err = l.db.Layering(ctx, content.MediaType, content, snap, pw)
 		if err != nil {
 			return err
@@ -433,6 +439,7 @@ func (l *local) bundleLayer(ctx context.Context, content *distribution.Content, 
 			return err
 		}
 	} else {
+		log.Logger.Debugf("layering content: %+v, %+v", content, content.Metadata)
 		layer, dgt, err = l.db.Layering(ctx, content.MediaType, content, nil, pw)
 		if err != nil {
 			return err
@@ -465,8 +472,27 @@ func (l *local) Sink(ctx context.Context, dir string, reference string, plog *pr
 		return err
 	}
 
-	snapRef, err := l.Snapshot(ctx, reference)
+	snapDiff, err := l.Snapdiff(ctx)	
 	if err != nil {
+		return err
+	}
+
+	snapRef, err := l.Snaplink(ctx, reference)
+	if err != nil {
+		return err
+	}
+
+	if err := os.MkdirAll(dir, 0o755); err != nil {
+		return fmt.Errorf("failed to create export directory: %w", err)
+	}
+
+	artifact := &spec.Artifact{}
+	if err := artifact.UnmarshalYamlFromPath(snapRef); err != nil {
+		return err
+	}
+
+	artifact.Package.Workspace = dir
+	if err = artifact.MarshalYAMLToWorkspace(); err != nil {
 		return err
 	}
 
@@ -501,7 +527,7 @@ func (l *local) Sink(ctx context.Context, dir string, reference string, plog *pr
 		errs.Go(func() error {
 			defer sem.Release(1)
 			return fmtErr(layerDesc,
-				l.sinkLayers(errCtx, layerDesc, snapRef, dir, pw))
+				l.sinkLayers(errCtx, layerDesc, artifact, snapRef, snapDiff, dir, pw))
 		})
 	}
 
@@ -520,7 +546,31 @@ func (l *local) Sink(ctx context.Context, dir string, reference string, plog *pr
 	return nil
 }
 
-func (l *local) sinkLayers(ctx context.Context, desc oci.Descriptor, snapref, dir string, pw *progress.ProgressWriter) error {
+func (l *local) sinkLayers(ctx context.Context, desc oci.Descriptor, artifact *spec.Artifact, snapref, snapdiff, dir string, pw *progress.ProgressWriter) error {
+	filename := desc.Annotations[modelspec.AnnotationFilepath]
+	diffid := filepath.Join(snapdiff, artifact.FindDiffid(filename))
+	difffile, err := os.Open(diffid)
+	if err != nil {
+		return fmt.Errorf("failed to create diff file %s: %w", diffid, err)
+	}
+	defer difffile.Close()
+
+	progressReader := io.TeeReader(difffile, pw)
+
+	path := filepath.Join(dir, filename)
+
+	f, err := os.OpenFile(path, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0o755)
+	if err != nil {
+		return fmt.Errorf("failed to create file %s: %w", path, err)
+	}
+	defer f.Close()
+
+	if _, err := io.Copy(f, progressReader); err != nil {
+		return fmt.Errorf("failed to write file %s: %w", path, err)
+	}
+
+	pw.MarkCompleted()
+
 	return nil
 }
 
@@ -739,13 +789,12 @@ func (l *local) Snappath(ctx context.Context, reference string) string {
 	return filepath.Join(l.snapPath, reference)
 }
 
-func (l *local) Snaplink(ctx context.Context, reference string) string {
+func (l *local) Snaplink(ctx context.Context, reference string) (string, error) {
 	path := filepath.Join(l.snapPath, reference)
 	if !IsLinkFileExist(path) {
-		return path
+		return path, nil
 	}
-	refpath, _ := ReadLinkFile(path)
-	return refpath
+	return ReadLinkFile(path)
 }
 
 func (l *local) snapdir(ctx context.Context, reference string) (string, error) {

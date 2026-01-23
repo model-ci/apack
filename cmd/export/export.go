@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"net/http"
+	"path/filepath"
 
 	"github.com/model-ci/apack/internal/api/base"
 	"github.com/model-ci/apack/internal/types"
@@ -86,6 +87,13 @@ func (e *export) completeAndValidate() error {
 		return fmt.Errorf("source image name cannot be empty")
 	} else {
 		e.Reference, err = registry.ParseReference(e.Source)
+		if err != nil {
+			return err
+		}
+	}
+
+	if e.Output != "" {
+		e.Output, err = filepath.Abs(e.Output)
 		if err != nil {
 			return err
 		}

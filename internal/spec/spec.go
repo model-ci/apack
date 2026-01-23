@@ -2,6 +2,7 @@
 package spec
 
 import (
+	"fmt"
 	"io"
 	"os"
 	"path/filepath"
@@ -89,6 +90,13 @@ func NewModelSpec() ModelSpec {
 
 func (a *Artifact) MarshalToYAML() ([]byte, error) {
 	return yaml.Marshal(a)
+}
+
+func (a *Artifact) MarshalYAMLToWorkspace() error {
+	if a.Package.Workspace == "" {
+		return fmt.Errorf("empty workspace path")
+	}
+	return a.MarshalYAMLToPath(a.Package.Workspace)
 }
 
 func (a *Artifact) MarshalYAMLToPath(path string) error {

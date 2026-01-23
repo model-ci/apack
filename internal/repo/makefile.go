@@ -6,12 +6,13 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/model-ci/apack/internal/log"
 	"github.com/model-ci/apack/internal/spec"
 	"github.com/model-ci/apack/internal/utils"
 	"github.com/model-ci/apack/pkg/distribution"
 	"github.com/model-ci/apack/pkg/layerdb"
-	"github.com/opencontainers/go-digest"
 	modelspec "github.com/modelpack/model-spec/specs-go/v1"
+	"github.com/opencontainers/go-digest"
 )
 
 type makefile struct {
@@ -36,7 +37,7 @@ func (m *makefile) Reference() string {
 
 func (m *makefile) Contents(_ context.Context) ([]distribution.Content, error) {
 	var contents []distribution.Content
-	for _, model := range m.artifact.Package.Models {
+	for i, model := range m.artifact.Package.Models {
 		mediaType := spec.OCIDetermineMediaType(m.algo)
 		if m.compatible {
 			mediaType = spec.CompatibleOCIDetermineMediaType(m.algo)
@@ -46,10 +47,13 @@ func (m *makefile) Contents(_ context.Context) ([]distribution.Content, error) {
 		if err != nil {
 			return nil, err
 		}
+		m.artifact.Package.Models[i].ID = c.ID
+		m.artifact.Package.Models[i].Path = c.Path	
+		m.artifact.Package.Models[i].Size = c.Size()
 		contents = append(contents, *c)
 	}
 
-	for _, datasets := range m.artifact.Package.DataSets {
+	for i, datasets := range m.artifact.Package.DataSets {
 		mediaType := spec.OCIDetermineMediaType(m.algo)
 		if m.compatible {
 			mediaType = spec.CompatibleOCIDetermineMediaType(m.algo)
@@ -59,6 +63,9 @@ func (m *makefile) Contents(_ context.Context) ([]distribution.Content, error) {
 		if err != nil {
 			return nil, err
 		}
+		m.artifact.Package.DataSets[i].ID = c.ID
+		m.artifact.Package.DataSets[i].Path = c.Path	
+		m.artifact.Package.DataSets[i].Size = c.Size()
 		contents = append(contents, *c)
 	}
 
@@ -74,7 +81,7 @@ func (m *makefile) Contents(_ context.Context) ([]distribution.Content, error) {
 		}
 	*/
 
-	for _, doc := range m.artifact.Package.Docs {
+	for i, doc := range m.artifact.Package.Docs {
 		mediaType := spec.OCIDetermineMediaType(m.algo)
 		if m.compatible {
 			mediaType = spec.CompatibleOCIDetermineMediaType(m.algo)
@@ -84,6 +91,9 @@ func (m *makefile) Contents(_ context.Context) ([]distribution.Content, error) {
 		if err != nil {
 			return nil, err
 		}
+		m.artifact.Package.Docs[i].ID = c.ID
+		m.artifact.Package.Docs[i].Path = c.Path	
+		m.artifact.Package.Docs[i].Size = c.Size()
 		contents = append(contents, *c)
 	}
 
@@ -95,6 +105,7 @@ func (m *makefile) buildContent(mediaType, artifactType string, filename string)
 		Path:         filename,
 		MediaType:    mediaType,
 		ArtifactType: artifactType,
+		Metadata:     &distribution.FileMetadata{},
 	}
 
 	path := filepath.Join(m.artifact.Package.Workspace, filename)
@@ -108,17 +119,23 @@ func (m *makefile) buildContent(mediaType, artifactType string, filename string)
 		return nil, err
 	}
 
-	fi, err := f.Stat()
-	if err != nil {
-		return nil, err
-	}
-	c.ReadCloser = f
-
 	dgt, err := digest.FromReader(f)
 	if err != nil {
 		return nil, err
 	}
 	c.ID = dgt.Encoded()
+
+	if _, err := f.Seek(0, 0); err != nil {
+        return nil, err
+    }
+	c.ReadCloser = f
+
+	fi, err := f.Stat()
+	if err != nil {
+		return nil, err
+	}
+
+	log.Logger.Debugf("buildContent: name=%s size=%d digest=%s", fi.Name(), fi.Size(), c.ID)
 
 	return c, c.Metadata.Fill(fi)
 }

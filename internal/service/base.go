@@ -476,7 +476,6 @@ func (b *BaseService) doBuild(ctx context.Context, plog *progress.Logger, req *t
 	if err != nil {
 		return fmt.Errorf("failed to build: %w", err)
 	}
-
 	tag := req.Reference.Reference
 	if tag == "" {
 		tag = "latest"
@@ -490,7 +489,7 @@ func (b *BaseService) doBuild(ctx context.Context, plog *progress.Logger, req *t
 }
 
 func (b *BaseService) doExport(ctx context.Context, plog *progress.Logger, req *types.Request) error {
-	err := b.distribution.Extract(ctx, req.Output, req.ReferenceStr, plog, &distribution.Options{Concurrency: b.config.Concurrency})
+	err := b.distribution.Sink(ctx, req.Output, req.ReferenceStr, plog, &distribution.Options{Concurrency: b.config.Concurrency})
 	if err != nil {
 		return fmt.Errorf("failed to export: %w", err)
 	}
