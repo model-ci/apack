@@ -6,7 +6,6 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/model-ci/apack/internal/log"
 	"github.com/model-ci/apack/internal/spec"
 	"github.com/model-ci/apack/internal/utils"
 	"github.com/model-ci/apack/pkg/distribution"
@@ -134,8 +133,6 @@ func (m *makefile) buildContent(mediaType, artifactType string, filename string)
 	if err != nil {
 		return nil, err
 	}
-
-	log.Logger.Debugf("buildContent: name=%s size=%d digest=%s", fi.Name(), fi.Size(), c.ID)
 
 	return c, c.Metadata.Fill(fi)
 }

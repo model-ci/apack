@@ -427,8 +427,6 @@ func (l *local) bundleLayer(ctx context.Context, content *distribution.Content, 
 			return err
 		}
 
-		log.Logger.Debugf("create snapshot file: %s, diff: %s, content: %+v", snapname, snapdiff, content)
-
 		layer, dgt, err = l.db.Layering(ctx, content.MediaType, content, snap, pw)
 		if err != nil {
 			return err
@@ -439,7 +437,6 @@ func (l *local) bundleLayer(ctx context.Context, content *distribution.Content, 
 			return err
 		}
 	} else {
-		log.Logger.Debugf("layering content: %+v, %+v", content, content.Metadata)
 		layer, dgt, err = l.db.Layering(ctx, content.MediaType, content, nil, pw)
 		if err != nil {
 			return err
