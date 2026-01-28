@@ -47,7 +47,7 @@ func (m *makefile) Contents(_ context.Context) ([]distribution.Content, error) {
 			return nil, err
 		}
 		m.artifact.Package.Models[i].ID = c.ID
-		m.artifact.Package.Models[i].Path = c.Path	
+		m.artifact.Package.Models[i].Path = c.Path
 		m.artifact.Package.Models[i].Size = c.Size()
 		contents = append(contents, *c)
 	}
@@ -63,7 +63,7 @@ func (m *makefile) Contents(_ context.Context) ([]distribution.Content, error) {
 			return nil, err
 		}
 		m.artifact.Package.DataSets[i].ID = c.ID
-		m.artifact.Package.DataSets[i].Path = c.Path	
+		m.artifact.Package.DataSets[i].Path = c.Path
 		m.artifact.Package.DataSets[i].Size = c.Size()
 		contents = append(contents, *c)
 	}
@@ -91,7 +91,7 @@ func (m *makefile) Contents(_ context.Context) ([]distribution.Content, error) {
 			return nil, err
 		}
 		m.artifact.Package.Docs[i].ID = c.ID
-		m.artifact.Package.Docs[i].Path = c.Path	
+		m.artifact.Package.Docs[i].Path = c.Path
 		m.artifact.Package.Docs[i].Size = c.Size()
 		contents = append(contents, *c)
 	}
@@ -125,8 +125,8 @@ func (m *makefile) buildContent(mediaType, artifactType string, filename string)
 	c.ID = dgt.Encoded()
 
 	if _, err := f.Seek(0, 0); err != nil {
-        return nil, err
-    }
+		return nil, err
+	}
 	c.ReadCloser = f
 
 	fi, err := f.Stat()

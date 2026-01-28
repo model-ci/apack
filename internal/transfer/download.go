@@ -20,7 +20,7 @@ const (
 	LargeFileThreshold = 100 * 1024 * 1024
 	MinChunkSize       = 10 * 1024 * 1024
 	MaxChunkCount      = 100
-	DefaultConcurrency = 5
+	DefaultConcurrency = 24
 	DefaultMaxRetries  = 5
 )
 
@@ -34,9 +34,40 @@ type Downloader struct {
 	Progress    *progress.ProgressWriter
 }
 
-// NewDownloader creates a Downloader with optional progress tracking
-func NewDownloader(url, destPath string, totalSize int64, pw *progress.ProgressWriter) *Downloader {
-	return &Downloader{
+// DownloadOption defines the function type for download options.
+type DownloadOption func(*Downloader)
+
+// WithConcurrency sets the concurrency limit for the downloader.
+func WithConcurrency(concurrency int) DownloadOption {
+	return func(d *Downloader) {
+		if concurrency > 0 {
+			d.Concurrency = concurrency
+		}
+	}
+}
+
+// WithMaxRetries sets the maximum number of retries.
+func WithMaxRetries(retries int) DownloadOption {
+	return func(d *Downloader) {
+		if retries >= 0 {
+			d.MaxRetries = retries
+		}
+	}
+}
+
+// WithClient sets a custom http.Client.
+func WithClient(client *http.Client) DownloadOption {
+	return func(d *Downloader) {
+		if client != nil {
+			d.Client = client
+		}
+	}
+}
+
+// NewDownloader creates a Downloader with optional progress tracking and functional options.
+func NewDownloader(url, destPath string, totalSize int64, pw *progress.ProgressWriter, opts ...DownloadOption) *Downloader {
+	// Initialize with default values
+	d := &Downloader{
 		URL:         url,
 		DestPath:    destPath,
 		TotalSize:   totalSize,
@@ -45,6 +76,13 @@ func NewDownloader(url, destPath string, totalSize int64, pw *progress.ProgressW
 		Progress:    pw,
 		Client:      createOptimizedClient(),
 	}
+
+	// Apply all options
+	for _, opt := range opts {
+		opt(d)
+	}
+
+	return d
 }
 
 func (d *Downloader) SetConcurrency(n int) *Downloader {

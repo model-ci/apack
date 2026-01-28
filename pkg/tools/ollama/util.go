@@ -5,8 +5,10 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"net/http"
 	"os"
 	"strings"
+	"time"
 
 	"github.com/model-ci/apack/internal/spec"
 	"github.com/model-ci/apack/pkg/distribution"
@@ -160,4 +162,69 @@ func isTolerate(media string) bool {
 
 func makeContent() *distribution.Content {
 	return &distribution.Content{}
+}
+
+// buildRepositoryManifestURL builds the URL for accessing the manifest API.
+// Format: <scheme>://<registry>/v2/<repository>/manifests/<digest_or_tag>
+// Reference: https://distribution.github.io/distribution/spec/api/#manifest
+func buildRepositoryManifestURL(plainHTTP bool, ref registry.Reference) string {
+	return strings.Join([]string{
+		buildRepositoryBaseURL(plainHTTP, ref),
+		"manifests",
+		ref.Reference,
+	}, "/")
+}
+
+// buildRepositoryBlobURL builds the URL for accessing the blob API.
+// Format: <scheme>://<registry>/v2/<repository>/blobs/<digest>
+// Reference: https://distribution.github.io/distribution/spec/api/#blob
+func buildRepositoryBlobURL(plainHTTP bool, ref registry.Reference) string {
+	return strings.Join([]string{
+		buildRepositoryBaseURL(plainHTTP, ref),
+		"blobs",
+		ref.Reference,
+	}, "/")
+}
+
+// buildRepositoryBaseURL builds the base endpoint of the remote repository.
+// Format: <scheme>://<registry>/v2/<repository>
+func buildRepositoryBaseURL(plainHTTP bool, ref registry.Reference) string {
+	return fmt.Sprintf("%s://%s/v2/%s", buildScheme(plainHTTP), ref.Host(), ref.Repository)
+}
+
+// buildScheme returns HTTP scheme used to access the remote registry.
+func buildScheme(plainHTTP bool) string {
+	if plainHTTP {
+		return "http"
+	}
+	return "https"
+}
+
+func getFinalDownloadURL(ctx context.Context, initialURL string) (string, error) {
+	client := &http.Client{
+		CheckRedirect: func(req *http.Request, via []*http.Request) error {
+			return http.ErrUseLastResponse
+		},
+		Timeout: 10 * time.Second,
+	}
+
+	req, err := http.NewRequestWithContext(ctx, http.MethodHead, initialURL, nil)
+	if err != nil {
+		return "", err
+	}
+
+	resp, err := client.Do(req)
+	if err != nil {
+		return "", err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode == http.StatusTemporaryRedirect || resp.StatusCode == http.StatusFound {
+		location := resp.Header.Get("Location")
+		if location != "" {
+			return location, nil
+		}
+	}
+
+	return initialURL, nil
 }

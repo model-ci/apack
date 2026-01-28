@@ -5,13 +5,25 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"os"
+	"path/filepath"
 	"strings"
 
+	"github.com/model-ci/apack/internal/log"
+	"github.com/model-ci/apack/internal/transfer"
+	"github.com/model-ci/apack/internal/utils"
 	"github.com/model-ci/apack/pkg/layerdb"
+	"github.com/model-ci/apack/pkg/progress"
 	"github.com/opencontainers/go-digest"
 	oci "github.com/opencontainers/image-spec/specs-go/v1"
 	"oras.land/oras-go/v2/registry/remote"
+	"oras.land/oras-go/v2/registry/remote/auth"
 )
+
+type Repository interface {
+	Resolve(ctx context.Context, tag string) (oci.Descriptor, error)
+	Fetch(ctx context.Context, target oci.Descriptor, diffid digest.Digest, snappath string, pw *progress.ProgressWriter) (io.ReadCloser, error)
+}
 
 type ollamaRepo struct {
 	*remote.Repository
@@ -33,13 +45,7 @@ func (o *ollamaRepo) Resolve(ctx context.Context, tag string) (oci.Descriptor, e
 }
 
 func resolve(ctx context.Context, repo *remote.Repository, tag string) (oci.Descriptor, []byte, error) {
-	scheme := "https"
-	if repo.PlainHTTP {
-		scheme = "http"
-	}
-	url := fmt.Sprintf("%s://%s/v2/%s/manifests/%s",
-		scheme, repo.Reference.Registry, repo.Reference.Repository, tag)
-
+	url := buildRepositoryManifestURL(repo.PlainHTTP, repo.Reference)
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
 	if err != nil {
 		return oci.Descriptor{}, nil, err
@@ -79,4 +85,41 @@ func resolve(ctx context.Context, repo *remote.Repository, tag string) (oci.Desc
 		Size:      int64(len(content)),
 	}
 	return desc, content, nil
+}
+
+func (o *ollamaRepo) Fetch(ctx context.Context, target oci.Descriptor, diffid digest.Digest, snappath string, pw *progress.ProgressWriter) (io.ReadCloser, error) {
+	ref := o.Reference
+	ref.Reference = target.Digest.String()
+	ctx = auth.AppendRepositoryScope(ctx, ref, auth.ActionPull)
+	url := buildRepositoryBlobURL(o.PlainHTTP, ref)
+
+	log.Logger.Debugf("Ollama fetching from %s", url)
+
+	finalURL, err := getFinalDownloadURL(ctx, url)
+	if err != nil {
+		log.Logger.Warnf("Redirect check failed for %s, falling back to original: %v", url, err)
+		finalURL = url
+	} else {
+		log.Logger.Debugf("Ollama redirected to: %s", finalURL)
+	}
+
+	var snapdiff string
+
+	if diffid.String() != "" {
+		snapdiff = filepath.Join(snappath, diffid.Encoded())
+	} else {
+		snapdiff = filepath.Join(snappath, target.Digest.Encoded())
+	}
+	if utils.FileExist(snapdiff) {
+		log.Logger.Warnf("Diff file already exists: %s", snapdiff)
+		pw.MarkCompleted()
+		return nil, nil
+	}
+
+	dl := transfer.NewDownloader(finalURL, snapdiff, target.Size, pw)
+	if err := dl.Start(ctx); err != nil {
+		return nil, fmt.Errorf("failed to download file: %w", err)
+	}
+
+	return os.Open(snapdiff)
 }

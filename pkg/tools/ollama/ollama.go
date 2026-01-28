@@ -19,7 +19,6 @@ import (
 	oci "github.com/opencontainers/image-spec/specs-go/v1"
 	"golang.org/x/sync/errgroup"
 	"golang.org/x/sync/semaphore"
-	"oras.land/oras-go/v2/registry"
 )
 
 const (
@@ -57,12 +56,12 @@ func (o *Ollama) Fetch(ctx context.Context, reference string, path string, plog 
 		return oci.DescriptorEmptyJSON, err
 	}
 
-	manifest, err := getManifest(ctx, repo, desc)
+	manifest, err := getManifest(ctx, repo.Repository, desc)
 	if err != nil {
 		return oci.DescriptorEmptyJSON, err
 	}
 
-	conf, err := getConfig(ctx, repo, manifest.Config)
+	conf, err := getConfig(ctx, repo.Repository, manifest.Config)
 	if err != nil {
 		return oci.DescriptorEmptyJSON, err
 	}
@@ -96,6 +95,11 @@ func (o *Ollama) Fetch(ctx context.Context, reference string, path string, plog 
 	fetchedDigests := map[string]bool{}
 	layerCount := len(manifest.Layers)
 
+	snapDiff, err := o.dstb.Snapdiff(ctx)
+	if err != nil {
+		return oci.DescriptorEmptyJSON, err
+	}
+
 	for index, fetch := range toFetch {
 		fetchDesc := fetch
 		fetchDescIndex := index
@@ -121,7 +125,7 @@ func (o *Ollama) Fetch(ctx context.Context, reference string, path string, plog 
 				fetchDesc.Annotations = map[string]string{}
 				fetchDesc.Annotations[modelspec.AnnotationFilepath] = getFilename(fetchDesc.MediaType, conf, &pkg)
 			}
-			return fmtErr(fetchDesc, o.fetchLayer(errCtx, repo, fetchDesc, diffid, reference, path, &layers, &layersMu, config, pw))
+			return fmtErr(fetchDesc, o.fetchLayer(errCtx, repo, fetchDesc, diffid, reference, path, snapDiff, &layers, &layersMu, config, pw, fetchProgress, plog))
 		})
 	}
 
@@ -154,6 +158,11 @@ func (o *Ollama) Fetch(ctx context.Context, reference string, path string, plog 
 			Format: conf.ModelFormat,
 		},
 	})
+	
+	err = artifact.MarshalYAMLToPath(path)
+	if err != nil {
+		return oci.DescriptorEmptyJSON, err
+	}
 
 	artifactBytes, err := artifact.MarshalJSON()
 	if err != nil {
@@ -186,7 +195,16 @@ func (o *Ollama) Fetch(ctx context.Context, reference string, path string, plog 
 	return manifestDesc, o.db.Index(ctx, reference, manifestDesc)
 }
 
-func (o *Ollama) fetchLayer(ctx context.Context, remote registry.Repository, desc oci.Descriptor, diffid digest.Digest, ref, path string, layers *[]oci.Descriptor, layersMu *sync.Mutex, config *layerdb.Config, pw *progress.ProgressWriter) error {
+func (o *Ollama) fetchLayer(ctx context.Context,
+	remote Repository,
+	desc oci.Descriptor,
+	diffid digest.Digest,
+	ref, path, snapdiff string,
+	layers *[]oci.Descriptor,
+	layersMu *sync.Mutex,
+	config *layerdb.Config,
+	pw *progress.ProgressWriter,
+	p *progress.Progress, plog *progress.Logger) error {
 	if exists, err := o.db.Exists(ctx, desc); err != nil {
 		return fmt.Errorf("failed to check local storage: %w", err)
 	} else if exists {
@@ -194,7 +212,7 @@ func (o *Ollama) fetchLayer(ctx context.Context, remote registry.Repository, des
 		return nil
 	}
 
-	blob, err := remote.Fetch(ctx, desc)
+	blob, err := remote.Fetch(ctx, desc, diffid, snapdiff, pw)
 	if err != nil {
 		return fmt.Errorf("failed to fetch: %w", err)
 	}
@@ -205,7 +223,7 @@ func (o *Ollama) fetchLayer(ctx context.Context, remote registry.Repository, des
 			return err
 		}
 	default:
-		err := o.output(ctx, desc, diffid, path, blob, layers, layersMu, config, pw)
+		err := o.output(ctx, desc, diffid, path, blob, layers, layersMu, config, p, plog)
 		if err != nil {
 			return err
 		}
@@ -216,7 +234,16 @@ func (o *Ollama) fetchLayer(ctx context.Context, remote registry.Repository, des
 	return nil
 }
 
-func (o *Ollama) output(ctx context.Context, desc oci.Descriptor, diffid digest.Digest, dir string, blob io.ReadCloser, layers *[]oci.Descriptor, layersMu *sync.Mutex, config *layerdb.Config, pw *progress.ProgressWriter) error {
+func (o *Ollama) output(
+	ctx context.Context,
+	desc oci.Descriptor,
+	diffid digest.Digest,
+	dir string,
+	blob io.ReadCloser,
+	layers *[]oci.Descriptor,
+	layersMu *sync.Mutex,
+	config *layerdb.Config,
+	p *progress.Progress, plog *progress.Logger) error {
 	filename := desc.Annotations[modelspec.AnnotationFilepath]
 
 	verify := false
@@ -237,6 +264,7 @@ func (o *Ollama) output(ctx context.Context, desc oci.Descriptor, diffid digest.
 	fm.Name = filename
 	fm.Size = desc.Size
 	content := &distribution.Content{
+		ID:           diffid.Encoded(),
 		Path:         filename,
 		MediaType:    layerdb.ImageLayerGzip,
 		ArtifactType: desc.MediaType,
@@ -244,7 +272,10 @@ func (o *Ollama) output(ctx context.Context, desc oci.Descriptor, diffid digest.
 		ReadCloser:   io.NopCloser(data),
 	}
 
-	return o.dstb.BundleOnce(ctx, content, dir, layers, layersMu, config, pw)
+	pw := progress.NewProgressWriter(plog, tools.ActionBundling, content.Metadata.Name, content.Metadata.Size)
+	p.Add(pw)
+
+	return o.dstb.BundleOnce(ctx, content, "", layers, layersMu, config, pw)
 }
 
 func (o *Ollama) OverideEndpoint(ctx context.Context, ep string) {}

@@ -258,7 +258,7 @@ func (l *local) pushLayer(ctx context.Context, ref string, remote registry.Repos
 
 		c := distribution.Content{
 			ReadCloser: f,
-			Metadata: &distribution.FileMetadata{},
+			Metadata:   &distribution.FileMetadata{},
 		}
 
 		err = c.Metadata.FillWithRename(fi, filename)
@@ -469,7 +469,7 @@ func (l *local) Sink(ctx context.Context, dir string, reference string, plog *pr
 		return err
 	}
 
-	snapDiff, err := l.Snapdiff(ctx)	
+	snapDiff, err := l.Snapdiff(ctx)
 	if err != nil {
 		return err
 	}

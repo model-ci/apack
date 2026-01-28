@@ -14,7 +14,7 @@ import (
 const (
 	DefaultArtifactName = "Apackfile"
 	IgnoreFileName      = ".apackignore"
-	Nil = "nil"
+	Nil                 = "nil"
 )
 
 type Artifact struct {
