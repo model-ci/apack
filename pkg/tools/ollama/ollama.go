@@ -123,7 +123,7 @@ func (o *Ollama) Fetch(ctx context.Context, reference string, path string, plog 
 			if fetchDescIndex < layerCount {
 				diffid = digest.Digest(conf.RootFS.DiffIDs[fetchDescIndex])
 				fetchDesc.Annotations = map[string]string{}
-				fetchDesc.Annotations[modelspec.AnnotationFilepath] = getFilename(fetchDesc.MediaType, conf, &pkg)
+				fetchDesc.Annotations[modelspec.AnnotationFilepath] = getFilename(fetchDesc.MediaType, fetch.Digest.Encoded(), fetch.Size, conf, &pkg)
 			}
 			return fmtErr(fetchDesc, o.fetchLayer(errCtx, repo, fetchDesc, diffid, reference, path, snapDiff, &layers, &layersMu, config, pw, fetchProgress, plog))
 		})
@@ -243,7 +243,8 @@ func (o *Ollama) output(
 	layers *[]oci.Descriptor,
 	layersMu *sync.Mutex,
 	config *layerdb.Config,
-	p *progress.Progress, plog *progress.Logger) error {
+	p *progress.Progress, 
+	plog *progress.Logger) error {
 	filename := desc.Annotations[modelspec.AnnotationFilepath]
 
 	verify := false
@@ -264,7 +265,7 @@ func (o *Ollama) output(
 	fm.Name = filename
 	fm.Size = desc.Size
 	content := &distribution.Content{
-		ID:           diffid.Encoded(),
+		ID:           desc.Digest.Encoded(),
 		Path:         filename,
 		MediaType:    layerdb.ImageLayerGzip,
 		ArtifactType: desc.MediaType,

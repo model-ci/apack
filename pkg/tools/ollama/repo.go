@@ -110,10 +110,11 @@ func (o *ollamaRepo) Fetch(ctx context.Context, target oci.Descriptor, diffid di
 	} else {
 		snapdiff = filepath.Join(snappath, target.Digest.Encoded())
 	}
+
 	if utils.FileExist(snapdiff) {
 		log.Logger.Warnf("Diff file already exists: %s", snapdiff)
 		pw.MarkCompleted()
-		return nil, nil
+		return os.Open(snapdiff)
 	}
 
 	dl := transfer.NewDownloader(finalURL, snapdiff, target.Size, pw)

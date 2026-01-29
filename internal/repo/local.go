@@ -238,7 +238,7 @@ func (l *local) pushLayer(ctx context.Context, ref string, remote registry.Repos
 
 		diffid := artifact.FindDiffid(filename)
 		if diffid == spec.Nil {
-			return fmt.Errorf("diffid not found for %s", filename)
+			return fmt.Errorf("diffid not found for %s, %+v", filename, artifact.Package)
 		}
 
 		diff, err := l.Snapdiff(ctx)

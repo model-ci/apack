@@ -20,7 +20,7 @@ const (
 	LargeFileThreshold = 100 * 1024 * 1024
 	MinChunkSize       = 10 * 1024 * 1024
 	MaxChunkCount      = 100
-	DefaultConcurrency = 24
+	DefaultConcurrency = 16
 	DefaultMaxRetries  = 5
 )
 

@@ -84,29 +84,29 @@ func getConfig(ctx context.Context, store oras.ReadOnlyTarget, configDesc oci.De
 	return &config, nil
 }
 
-func getFilename(media string, oc *OllamaConfig, pkg *spec.Package) string {
+func getFilename(media string, id string, size int64, oc *OllamaConfig, pkg *spec.Package) string {
 	switch media {
 	case "application/vnd.ollama.image.model":
 		name := fmt.Sprintf("%s.%s", oc.FileType, oc.ModelFormat)
-		pkg.Models = append(pkg.Models, spec.Model{Name: name})
+		pkg.Models = append(pkg.Models, spec.Model{ID: id, Path: name, Size: size})
 		return name
 	case "application/vnd.ollama.image.prompt", "application/vnd.ollama.image.template":
 		name := "TEMPLATE"
-		pkg.Codes = append(pkg.Codes, spec.Code{Path: name})
+		pkg.Codes = append(pkg.Codes, spec.Code{ID: id, Path: name, Size: size})
 		return name
 	case "application/vnd.ollama.image.system":
 		name := "SYSTEM"
-		pkg.Codes = append(pkg.Codes, spec.Code{Path: name})
+		pkg.Codes = append(pkg.Codes, spec.Code{ID: id, Path: name, Size: size})
 		return name
 	case "application/vnd.ollama.image.params":
 		name := "params"
-		pkg.Docs = append(pkg.Docs, spec.Doc{Path: name})
+		pkg.Docs = append(pkg.Docs, spec.Doc{ID: id, Path: name, Size: size})
 		return name
 	case "application/vnd.ollama.image.messages":
 		return "messages"
 	case "application/vnd.ollama.image.license":
 		name := "LICENSE"
-		pkg.Docs = append(pkg.Docs, spec.Doc{Path: name})
+		pkg.Docs = append(pkg.Docs, spec.Doc{ID: id, Path: name, Size: size})
 		return name
 	}
 	return "unknown"
