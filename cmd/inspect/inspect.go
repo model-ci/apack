@@ -8,7 +8,7 @@ import (
 
 	"github.com/model-ci/apack/internal/api/base"
 	"github.com/model-ci/apack/internal/types"
-	"github.com/model-ci/apack/internal/utils"
+	"github.com/model-ci/apack/pkg/client"
 	"github.com/urfave/cli/v2"
 	"oras.land/oras-go/v2/registry"
 )
@@ -40,7 +40,7 @@ Examples:
 
 type Inspect struct {
 	ctx       context.Context
-	client    *utils.Client
+	client    *client.BaseClient
 	Format    string
 	Tag       string
 	reference registry.Reference
@@ -65,7 +65,7 @@ func NewInspect(ctx *cli.Context) (*Inspect, error) {
 
 func (i *Inspect) completeAndValidate() error {
 	var err error
-	i.client, err = utils.NewDefaultClient(i.host)
+	i.client, err = client.NewDefaultCLI(i.host)
 	if err != nil {
 		return err
 	}
@@ -91,7 +91,7 @@ func (i *Inspect) Run() error {
 	return nil
 }
 
-func Insepection(ctx context.Context, cli *utils.Client, ref registry.Reference) (*types.Inspect, error) {
+func Insepection(ctx context.Context, cli *client.BaseClient, ref registry.Reference) (*types.Inspect, error) {
 	req := types.Request{Reference: ref, ReferenceStr: ref.String()}
 
 	resp, err := cli.Post(ctx, base.API("/v1/inspect"), req)

@@ -203,7 +203,7 @@ func (b *BaseAPI) handleRun(w http.ResponseWriter, req *http.Request, params htt
 
 	res, err := b.service.Run(req.Context(), run)
 	if err != nil {
-		utils.WriteError(w, "RUN", "run error", http.StatusInternalServerError)
+		utils.WriteError(w, "RUN", err.Error(), http.StatusInternalServerError)
 		return
 	}
 

@@ -46,12 +46,11 @@ func NewBaseService(path string, m *task.Manager, config *Config) (*BaseService,
 	if err != nil {
 		return nil, err
 	}
-	/*
-		rt, err := runtime.New(d, path)
-		if err != nil {
-			return nil, err
-		}
-	*/
+
+	rt, err := runtime.New(d, path)
+	if err != nil {
+		return nil, err
+	}
 
 	t, err := tools.NewTools(db, d, config.Concurrency)
 	if err != nil {
@@ -61,7 +60,7 @@ func NewBaseService(path string, m *task.Manager, config *Config) (*BaseService,
 	return &BaseService{
 		path:         path,
 		distribution: d,
-		runtime:      nil,
+		runtime:      rt,
 		manager:      m,
 		config:       config,
 		tools:        t,
@@ -240,38 +239,32 @@ func (b *BaseService) Remove(ctx context.Context, req *types.Request) (*types.Re
 }
 
 func (b *BaseService) Run(ctx context.Context, req *types.Request) (*types.Response, error) {
-	task := b.manager.CreateTask("run", map[string]interface{}{
-		"reference": req.ReferenceStr,
-	})
-
-	go b.executeRun(task.Context(), task.ID, req)
-
-	return &types.Response{
-		TaskID: task.ID,
-	}, nil
-}
-
-func (b *BaseService) executeRun(ctx context.Context, taskID string, req *types.Request) {
-	defer func() {
-		if r := recover(); r != nil {
-			b.manager.CompleteTask(taskID, fmt.Errorf("model run panic: %v", r))
-		}
-	}()
-
-	progressLogger := progress.NewLogger(taskID, b.manager, b.logger)
-	progressLogger.Infoln("Starting run model operation")
-
-	path, err := b.distribution.Snapshot(ctx, req.ReferenceStr)
+	snapref, err := b.distribution.Snaplink(ctx, req.ReferenceStr)
 	if err != nil {
-		b.manager.CompleteTask(taskID, err)
-		return
+		return nil, err
 	}
-	err = b.doRun(ctx, req.ReferenceStr, path, progressLogger)
-	b.manager.CompleteTask(taskID, err)
-}
 
-func (b *BaseService) doRun(ctx context.Context, ref, path string, plog *progress.Logger) error {
-	return b.runtime.Run(ctx, ref, path, *plog)
+	artifact := spec.Artifact{}
+	err = artifact.UnmarshalYamlFromPath(snapref)
+	if err != nil {
+		return nil, err
+	}
+
+	log.Logger.Debugf("artifact: %+v", artifact)
+
+	diff, err := b.distribution.Snapdiff(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	log.Logger.Debugf("diff: %s", diff)
+
+	err = b.runtime.Run(ctx, req.ReferenceStr, diff, artifact.Package.Models)
+	if err != nil {
+		return nil, err
+	}
+
+	return &types.Response{}, nil
 }
 
 func (b *BaseService) Ps(ctx context.Context, req *types.Request) (*types.Response, error) {

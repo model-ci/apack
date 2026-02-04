@@ -7,7 +7,7 @@ import (
 
 	"github.com/model-ci/apack/internal/api/base"
 	"github.com/model-ci/apack/internal/types"
-	"github.com/model-ci/apack/internal/utils"
+	"github.com/model-ci/apack/pkg/client"
 	"github.com/urfave/cli/v2"
 )
 
@@ -50,7 +50,7 @@ type Remove struct {
 	Force    bool
 	Quiet    bool
 	host     string
-	client   *utils.Client
+	client   *client.BaseClient
 }
 
 func NewRemove(ctx *cli.Context) (*Remove, error) {
@@ -68,7 +68,7 @@ func NewRemove(ctx *cli.Context) (*Remove, error) {
 
 func (r *Remove) completeAndValidate() error {
 	var err error
-	r.client, err = utils.NewDefaultClient(r.host)
+	r.client, err = client.NewDefaultCLI(r.host)
 	if err != nil {
 		return err
 	}

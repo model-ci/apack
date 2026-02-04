@@ -7,7 +7,7 @@ import (
 
 	"github.com/model-ci/apack/internal/api/base"
 	"github.com/model-ci/apack/internal/types"
-	"github.com/model-ci/apack/internal/utils"
+	"github.com/model-ci/apack/pkg/client"
 	"github.com/urfave/cli/v2"
 	"oras.land/oras-go/v2/registry"
 )
@@ -54,7 +54,7 @@ Examples:
 
 type Push struct {
 	ctx                 context.Context
-	client              *utils.Client
+	client              *client.BaseClient
 	Tag                 string
 	Reference           registry.Reference
 	Registry            string
@@ -93,7 +93,7 @@ func NewPush(ctx *cli.Context) (*Push, error) {
 func (p *Push) completeAndValidate() error {
 	var err error
 	if p.client == nil {
-		p.client, err = utils.NewDefaultClient(p.host)
+		p.client, err = client.NewDefaultCLI(p.host)
 		if err != nil {
 			return err
 		}

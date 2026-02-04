@@ -11,7 +11,7 @@ import (
 	"github.com/coder/websocket"
 	"github.com/model-ci/apack/internal/log"
 	"github.com/model-ci/apack/internal/task"
-	"github.com/model-ci/apack/pkg/client"
+	"github.com/model-ci/apack/pkg/httputil"
 )
 
 type Client struct {
@@ -32,7 +32,7 @@ func NewClient(serverURL string) *Client {
 	return client
 }
 
-func NewClientFromHttpClient(httpClient *client.HttpClient) *Client {
+func NewClientFromHttpClient(httpClient *httputil.HttpClient) *Client {
 	return &Client{
 		serverURL: httpClient.GetBaseURL(),
 		host:      httpClient.GetHost(),
@@ -68,10 +68,96 @@ func (c *Client) parseHost() {
 }
 
 func (c *Client) WatchProgress(ctx context.Context, taskID, operation string) error {
-	return c.watchProgress(ctx, taskID, operation)
+	return c.watcher(ctx, taskID, operation)
 }
 
-func (c *Client) watchProgress(ctx context.Context, taskID, operation string) error {
+func (c *Client) Watcher(ctx context.Context, taskID, operation string) (<-chan *task.Event, error) {
+	return c.watcherStream(ctx, taskID, operation)
+}
+
+func (c *Client) watcherStream(ctx context.Context, taskID, operation string) (<-chan *task.Event, error) {
+	u := fmt.Sprintf("%s/base/v1/tasks/%s/stream", c.serverURL, taskID)
+	
+	dialCtx, cancel := context.WithTimeout(ctx, 60*time.Second)
+	defer cancel()
+
+	dialer := c.createDialer()
+	conn, resp, err := websocket.Dial(dialCtx, u, &websocket.DialOptions{
+		CompressionMode: websocket.CompressionContextTakeover,
+		HTTPClient: &http.Client{
+			Transport: &http.Transport{DialContext: dialer},
+		},
+	})
+
+	if err != nil {
+		if resp != nil {
+			log.Logger.Errorf("WebSocket dial failed with status: %d", resp.StatusCode)
+		}
+		return nil, fmt.Errorf("failed to connect to WebSocket: %w", err)
+	}
+
+	conn.SetReadLimit(4 * 1024 * 1024)
+	ch := make(chan *task.Event, 100)
+
+	go func() {
+		defer conn.CloseNow()
+		defer close(ch)
+
+		for {
+			select {
+			case <-ctx.Done():
+				log.Logger.Infof("Context cancelled for %s", operation)
+				return
+			default:
+			}
+
+			_, data, err := conn.Read(ctx)
+			if err != nil {
+				if websocket.CloseStatus(err) == websocket.StatusNormalClosure {
+					log.Logger.Infof("WebSocket connection closed normally")
+					return
+				}
+				
+				log.Logger.Errorf("WebSocket read error: %v", err)
+				
+				select {
+				case ch <- &task.Event{
+					Type:    task.EventError,
+					Message: fmt.Sprintf("read error: %v", err),
+				}:
+				case <-ctx.Done():
+				}
+				return
+			}
+
+			if len(data) == 0 {
+				log.Logger.Warn("Received empty message")
+				continue
+			}
+
+			var event task.Event
+			if err := event.UnmarshalJSON(data); err != nil {
+				log.Logger.Warnf("Failed to unmarshal event data: %s, error: %v", string(data), err)
+				continue
+			}
+
+			select {
+			case ch <- &event:
+			case <-ctx.Done():
+				return
+			}
+
+			switch event.Type {
+			case task.EventError, task.EventComplete, task.EventCancel:
+				return
+			}
+		}
+	}()
+
+	return ch, nil
+}
+
+func (c *Client) watcher(ctx context.Context, taskID, operation string) error {
 	u := fmt.Sprintf("%s/base/v1/tasks/%s/stream", c.serverURL, taskID)
 	dialer := c.createDialer()
 
@@ -169,7 +255,7 @@ func (c *Client) WatchProgressWithRetry(ctx context.Context, taskID, operation s
 	const retryDelay = time.Second * 2
 
 	for attempt := 1; attempt <= maxRetries; attempt++ {
-		err := c.watchProgress(ctx, taskID, operation)
+		err := c.watcher(ctx, taskID, operation)
 
 		if err == nil {
 			return nil

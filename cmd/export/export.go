@@ -8,7 +8,7 @@ import (
 
 	"github.com/model-ci/apack/internal/api/base"
 	"github.com/model-ci/apack/internal/types"
-	"github.com/model-ci/apack/internal/utils"
+	"github.com/model-ci/apack/pkg/client"
 	"github.com/urfave/cli/v2"
 	"oras.land/oras-go/v2/registry"
 )
@@ -51,7 +51,7 @@ Examples:
 
 type export struct {
 	ctx       context.Context
-	client    *utils.Client
+	client    *client.BaseClient
 	Reference registry.Reference
 	host      string
 	operation string
@@ -77,7 +77,7 @@ func (e *export) completeAndValidate() error {
 	var err error
 
 	if e.client == nil {
-		e.client, err = utils.NewDefaultClient(e.host)
+		e.client, err = client.NewDefaultCLI(e.host)
 		if err != nil {
 			return err
 		}

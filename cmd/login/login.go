@@ -8,7 +8,7 @@ import (
 
 	"github.com/model-ci/apack/internal/config"
 	"github.com/model-ci/apack/internal/repo"
-	"github.com/model-ci/apack/internal/utils"
+	"github.com/model-ci/apack/pkg/client"
 	"github.com/model-ci/apack/pkg/distribution"
 	"github.com/urfave/cli/v2"
 	"golang.org/x/term"
@@ -51,7 +51,7 @@ Examples:
 }
 
 type Login struct {
-	client    *utils.Client
+	client    *client.BaseClient
 	operation string
 	ctx       context.Context
 	Registry  string
@@ -99,7 +99,7 @@ func NewLogin(ctx *cli.Context) (*Login, error) {
 	}
 
 	var err error
-	login.client, err = utils.NewDefaultClient(ctx.String("host"))
+	login.client, err = client.NewDefaultCLI(ctx.String("host"))
 	if err != nil {
 		return nil, fmt.Errorf("failed to create client: %v", err)
 	}

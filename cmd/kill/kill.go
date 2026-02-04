@@ -7,7 +7,7 @@ import (
 
 	"github.com/model-ci/apack/internal/api/base"
 	"github.com/model-ci/apack/internal/types"
-	"github.com/model-ci/apack/internal/utils"
+	"github.com/model-ci/apack/pkg/client"
 	"github.com/urfave/cli/v2"
 )
 
@@ -39,7 +39,7 @@ Examples:
 
 type Kill struct {
 	ctx    context.Context
-	client *utils.Client
+	client *client.BaseClient
 	id     string
 	Signal string
 	host   string
@@ -58,7 +58,7 @@ func NewKill(ctx *cli.Context) (*Kill, error) {
 
 func (k *Kill) completeAndValidate() error {
 	var err error
-	k.client, err = utils.NewDefaultClient(k.host)
+	k.client, err = client.NewDefaultCLI(k.host)
 	if err != nil {
 		return err
 	}

@@ -11,8 +11,9 @@ import (
 	"github.com/model-ci/apack/internal/api/base"
 	"github.com/model-ci/apack/internal/spec"
 	"github.com/model-ci/apack/internal/types"
-	"github.com/model-ci/apack/internal/utils"
+	"github.com/model-ci/apack/pkg/client"
 	"github.com/model-ci/apack/pkg/layerdb"
+	"github.com/model-ci/apack/pkg/utils"
 	"github.com/urfave/cli/v2"
 	"oras.land/oras-go/v2/registry"
 )
@@ -67,7 +68,7 @@ Examples:
 
 type build struct {
 	ctx       context.Context
-	client    *utils.Client
+	client    *client.BaseClient
 	Reference registry.Reference
 
 	BuildContext string
@@ -128,7 +129,7 @@ func (p *build) completeAndValidate() error {
 	var err error
 
 	if p.client == nil {
-		p.client, err = utils.NewDefaultClient(p.host)
+		p.client, err = client.NewDefaultCLI(p.host)
 		if err != nil {
 			return err
 		}

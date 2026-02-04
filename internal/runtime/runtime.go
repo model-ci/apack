@@ -2,30 +2,39 @@ package runtime
 
 import (
 	"context"
+	"fmt"
+	"path/filepath"
+	"time"
 
-	"github.com/model-ci/apack/pkg/progress"
+	"github.com/model-ci/apack/internal/log"
+	"github.com/model-ci/apack/internal/runtime/infer"
+	"github.com/model-ci/apack/internal/spec"
+	"github.com/model-ci/apack/pkg/distribution"
+	"github.com/model-ci/apack/pkg/layerdb"
 )
 
-/*
-	type runtime struct {
-		distribution.Distribution
-		//infer.Infer
-	}
-*/
 type Runtime interface {
-	Run(ctx context.Context, ref, path string, plog progress.Logger) error
+	Run(ctx context.Context, ref, path string, models []spec.Model) error
 	Kill(ctx context.Context, id string) error
 	Ps(ctx context.Context) (*States, error)
 }
 
-/*
+type runtime struct {
+	distribution.Distribution
+	*infer.Infer
+}
+
 func New(d distribution.Distribution, workspace string) (Runtime, error) {
-	client, err := infer.New(&infercfg.Config{
+	cfg := &infer.Config{
 		AutoRestart: true,
 		MaxRetries:  3,
-		BinaryPath:  filepath.Join(workspace, "runtime"),
-	})
+		BasePath:    filepath.Join(workspace, "runtime"),
+	}
 
+	cfg.LogPath = filepath.Join(cfg.BasePath, "logs")
+	cfg.PidPath = filepath.Join(cfg.BasePath, "pids")
+
+	client, err := infer.New(cfg)
 	if err != nil {
 		return nil, err
 	}
@@ -36,35 +45,41 @@ func New(d distribution.Distribution, workspace string) (Runtime, error) {
 	}
 
 	return rt, nil
-	return &runtime{}, nil
 }
 
-func (r *runtime) Run(ctx context.Context, ref, path string, plog progress.Logger) error {
-	modelPath, err := findModelFile(path)
-	if err != nil {
-		return err
+func (r *runtime) Run(ctx context.Context, ref, path string, models []spec.Model) error {
+	if models == nil || len(models) > 1 {
+		log.Logger.Debug("Only one model can be run at a time")
+		return fmt.Errorf("only one model can be run at a time")
 	}
 
-	_ = modelPath
+	modelid := models[0].ID
+	modelpath := filepath.Join(path, modelid)
+
+	log.Logger.Debugf("Running model %s", modelid)
 
 	pp := &PortPair{}
 	if err := pp.GenPortPair(); err != nil {
 		return err
 	}
 
-
-	runner, desc, err := r.Infer.Create(sc, ac, ref)
+	proc, desc, err := r.Infer.Spawning(&infer.Params{
+		ID:        modelid,
+		ModelPath: modelpath,
+		Port:      pp.Port1,
+		Reference: ref,
+	})
 	if err != nil {
 		return err
 	}
 
 	defer func(cause error) {
 		if cause != nil {
-			runner.Stop()
+			r.Infer.Stop(shortid(modelid))
 		}
 	}(err)
 
-	if err := runner.Start(ctx); err != nil {
+	if err := proc.Exec(ctx); err != nil {
 		return err
 	}
 
@@ -74,13 +89,12 @@ func (r *runtime) Run(ctx context.Context, ref, path string, plog progress.Logge
 	}
 
 	st := &State{
-		ID:         desc.Digest.Encoded()[:12],
+		ID:         shortid(modelid),
 		ModelImage: ref,
 		CreateAt:   time.Now(),
-		Status:     "",
 		Endpoints: []string{
-			fmt.Sprintf(":%d", sc.Port),
-			fmt.Sprintf(":%d", ac.Port),
+			fmt.Sprintf(":%d", pp.Port1),
+			fmt.Sprintf(":%s", "--"),
 		},
 		Descriptor: desc,
 	}
@@ -99,13 +113,7 @@ func (r *runtime) Run(ctx context.Context, ref, path string, plog progress.Logge
 }
 
 func (r *runtime) Kill(ctx context.Context, id string) error {
-	runner, err := r.Infer.Get(id)
-	if err != nil {
-		return fmt.Errorf(
-			"runtime %s not found")
-	}
-
-	if err := runner.Stop(); err != nil {
+	if err := r.Infer.Stop(id); err != nil {
 		return err
 	}
 
@@ -118,22 +126,21 @@ func (r *runtime) Kill(ctx context.Context, id string) error {
 
 	var stateBytes []byte
 	var ref string
+	st := &State{}
 	for _, status := range statuses {
-		if status.Digest.Encoded()[:12] == id {
-			stateBytes = status.Data
+		err = st.UnmarshalJSON(status.Data)
+		if err != nil {
+			return err
+		}
+
+		if st.ID == id {
 			ref = status.Annotations[layerdb.OCIAnnotationRefName]
 			found = true
 		}
 	}
 
-	if !found && stateBytes == nil {
+	if !found {
 		return fmt.Errorf("runtime %s not found", id)
-	}
-
-	st := &State{}
-	err = st.UnmarshalJSON(stateBytes)
-	if err != nil {
-		return err
 	}
 
 	st.UpdateStatus(StatusExited, st.CreateAt)
@@ -165,12 +172,12 @@ func (r *runtime) Ps(ctx context.Context) (*States, error) {
 			return nil, err
 		}
 
-		run, err := r.Get(st.ID)
-		if err != nil {
-			return nil, err
+		proc, exist := r.Status(st.ID)
+		if !exist {
+			return nil, fmt.Errorf("runtime %s not found", st.ID)
 		}
 
-		if run.IsRunning() {
+		if proc.IsRunning() {
 			st.UpdateStatus(StatusUp, st.CreateAt)
 		} else {
 			st.UpdateStatus(StatusExited, st.CreateAt)
@@ -194,4 +201,3 @@ func (r *runtime) Ps(ctx context.Context) (*States, error) {
 
 	return states, nil
 }
-*/

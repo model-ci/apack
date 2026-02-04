@@ -7,7 +7,7 @@ import (
 
 	"github.com/model-ci/apack/internal/api/base"
 	"github.com/model-ci/apack/internal/types"
-	"github.com/model-ci/apack/internal/utils"
+	"github.com/model-ci/apack/pkg/client"
 	"github.com/urfave/cli/v2"
 	"oras.land/oras-go/v2/registry"
 )
@@ -43,7 +43,7 @@ type Tag struct {
 	srcRef    registry.Reference
 	dstRef    registry.Reference
 	host      string
-	client    *utils.Client
+	client    *client.BaseClient
 }
 
 func NewTag(ctx *cli.Context) (*Tag, error) {
@@ -73,7 +73,7 @@ func NewTag(ctx *cli.Context) (*Tag, error) {
 func (t *Tag) completeAndValidate() error {
 	var err error
 	if t.client == nil {
-		t.client, err = utils.NewDefaultClient(t.host)
+		t.client, err = client.NewDefaultCLI(t.host)
 		if err != nil {
 			return err
 		}

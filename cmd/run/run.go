@@ -7,7 +7,7 @@ import (
 
 	"github.com/model-ci/apack/internal/api/base"
 	"github.com/model-ci/apack/internal/types"
-	"github.com/model-ci/apack/internal/utils"
+	"github.com/model-ci/apack/pkg/client"
 	"github.com/urfave/cli/v2"
 	"oras.land/oras-go/v2/registry"
 )
@@ -50,7 +50,7 @@ Examples:
 
 type Run struct {
 	ctx       context.Context
-	client    *utils.Client
+	client    *client.BaseClient
 	Reference registry.Reference
 	Image     string
 	Command   []string
@@ -82,7 +82,7 @@ func NewRun(ctx *cli.Context) (*Run, error) {
 func (r *Run) completeAndValidate() error {
 	var err error
 	if r.client == nil {
-		r.client, err = utils.NewDefaultClient(r.host)
+		r.client, err = client.NewDefaultCLI(r.host)
 		if err != nil {
 			return err
 		}

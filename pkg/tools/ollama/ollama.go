@@ -9,7 +9,7 @@ import (
 	"time"
 
 	"github.com/model-ci/apack/internal/spec"
-	"github.com/model-ci/apack/internal/utils"
+	"github.com/model-ci/apack/pkg/utils"
 	"github.com/model-ci/apack/pkg/distribution"
 	"github.com/model-ci/apack/pkg/layerdb"
 	"github.com/model-ci/apack/pkg/progress"
@@ -158,7 +158,7 @@ func (o *Ollama) Fetch(ctx context.Context, reference string, path string, plog 
 			Format: conf.ModelFormat,
 		},
 	})
-	
+
 	err = artifact.MarshalYAMLToPath(path)
 	if err != nil {
 		return oci.DescriptorEmptyJSON, err
@@ -243,7 +243,7 @@ func (o *Ollama) output(
 	layers *[]oci.Descriptor,
 	layersMu *sync.Mutex,
 	config *layerdb.Config,
-	p *progress.Progress, 
+	p *progress.Progress,
 	plog *progress.Logger) error {
 	filename := desc.Annotations[modelspec.AnnotationFilepath]
 

@@ -8,7 +8,7 @@ import (
 
 	"github.com/model-ci/apack/internal/api/base"
 	"github.com/model-ci/apack/internal/types"
-	"github.com/model-ci/apack/internal/utils"
+	"github.com/model-ci/apack/pkg/client"
 	"github.com/model-ci/apack/pkg/tools/huggingface"
 	"github.com/model-ci/apack/pkg/tools/ollama"
 	"github.com/urfave/cli/v2"
@@ -101,7 +101,7 @@ type Importer struct {
 	branch       string
 	tag          string
 	repo         string
-	client       *utils.Client
+	client       *client.BaseClient
 }
 
 func NewImporter(ctx *cli.Context) (*Importer, error) {
@@ -123,7 +123,7 @@ func NewImporter(ctx *cli.Context) (*Importer, error) {
 
 func (i *Importer) completeAndValidate() error {
 	var err error
-	i.client, err = utils.NewDefaultClient(i.host)
+	i.client, err = client.NewDefaultCLI(i.host)
 	if err != nil {
 		return err
 	}

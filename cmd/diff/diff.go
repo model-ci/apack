@@ -6,7 +6,7 @@ import (
 
 	"github.com/model-ci/apack/cmd/inspect"
 	"github.com/model-ci/apack/internal/types"
-	"github.com/model-ci/apack/internal/utils"
+	"github.com/model-ci/apack/pkg/client"
 	"github.com/urfave/cli/v2"
 	"oras.land/oras-go/v2/registry"
 )
@@ -42,7 +42,7 @@ type Diff struct {
 	diffA     registry.Reference
 	diffB     registry.Reference
 	host      string
-	client    *utils.Client
+	client    *client.BaseClient
 }
 
 func NewDiff(ctx *cli.Context) (*Diff, error) {
@@ -72,7 +72,7 @@ func NewDiff(ctx *cli.Context) (*Diff, error) {
 func (d *Diff) completeAndValidate() error {
 	var err error
 	if d.client == nil {
-		d.client, err = utils.NewDefaultClient(d.host)
+		d.client, err = client.NewDefaultCLI(d.host)
 		if err != nil {
 			return err
 		}
@@ -127,7 +127,7 @@ func (d *Diff) Run() error {
 
 }
 
-func inspectPair(ctx context.Context, cli *utils.Client, ref1, ref2 registry.Reference) (*types.Inspect, *types.Inspect, error) {
+func inspectPair(ctx context.Context, cli *client.BaseClient, ref1, ref2 registry.Reference) (*types.Inspect, *types.Inspect, error) {
 	inspect1, err := inspect.Insepection(ctx, cli, ref1)
 	if err != nil {
 		return nil, nil, err

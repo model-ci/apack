@@ -11,7 +11,7 @@ import (
 	"github.com/model-ci/apack/internal/api/base"
 	"github.com/model-ci/apack/internal/runtime"
 	"github.com/model-ci/apack/internal/types"
-	"github.com/model-ci/apack/internal/utils"
+	"github.com/model-ci/apack/pkg/client"
 	"github.com/urfave/cli/v2"
 )
 
@@ -58,7 +58,7 @@ Examples:
 
 type Ps struct {
 	ctx    context.Context
-	client *utils.Client
+	client *client.BaseClient
 	All    bool
 	Filter string
 	Format string
@@ -80,7 +80,7 @@ func NewPs(ctx *cli.Context) (*Ps, error) {
 
 func (p *Ps) completeAndValidate() error {
 	var err error
-	p.client, err = utils.NewDefaultClient(p.host)
+	p.client, err = client.NewDefaultCLI(p.host)
 	if err != nil {
 		return err
 	}

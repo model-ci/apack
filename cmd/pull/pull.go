@@ -10,7 +10,7 @@ import (
 	"github.com/model-ci/apack/internal/api/base"
 	"github.com/model-ci/apack/internal/config"
 	"github.com/model-ci/apack/internal/types"
-	"github.com/model-ci/apack/internal/utils"
+	"github.com/model-ci/apack/pkg/client"
 	"github.com/urfave/cli/v2"
 	"oras.land/oras-go/v2/registry"
 )
@@ -53,7 +53,7 @@ Examples:
 
 type Pull struct {
 	ctx          context.Context
-	client       *utils.Client
+	client       *client.BaseClient
 	operation    string
 	ReferenceStr string
 	Reference    registry.Reference
@@ -77,7 +77,7 @@ func NewPull(ctx *cli.Context) (*Pull, error) {
 
 func (p *Pull) completeAndValidate() error {
 	var err error
-	p.client, err = utils.NewDefaultClient(p.host)
+	p.client, err = client.NewDefaultCLI(p.host)
 	if err != nil {
 		return err
 	}

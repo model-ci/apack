@@ -12,7 +12,7 @@ import (
 
 	"github.com/model-ci/apack/internal/api/base"
 	"github.com/model-ci/apack/internal/types"
-	"github.com/model-ci/apack/internal/utils"
+	"github.com/model-ci/apack/pkg/client"
 	"github.com/model-ci/apack/pkg/distribution"
 	"github.com/urfave/cli/v2"
 	"oras.land/oras-go/v2/registry"
@@ -70,7 +70,7 @@ type options struct {
 type List struct {
 	distribution.Options
 	ctx        context.Context
-	client     *utils.Client
+	client     *client.BaseClient
 	configHome string
 	remoteRef  *registry.Reference
 	format     string
@@ -96,7 +96,7 @@ func NewList(ctx *cli.Context) (*List, error) {
 
 func (l *List) completeAndValidate() error {
 	var err error
-	l.client, err = utils.NewDefaultClient(l.host)
+	l.client, err = client.NewDefaultCLI(l.host)
 	if err != nil {
 		return err
 	}

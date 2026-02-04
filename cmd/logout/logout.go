@@ -6,7 +6,7 @@ import (
 
 	"github.com/model-ci/apack/internal/config"
 	"github.com/model-ci/apack/internal/repo"
-	"github.com/model-ci/apack/internal/utils"
+	"github.com/model-ci/apack/pkg/client"
 	"github.com/urfave/cli/v2"
 )
 
@@ -32,7 +32,7 @@ Examples:
 
 type Logout struct {
 	ctx       context.Context
-	client    *utils.Client
+	client    *client.BaseClient
 	operation string
 	Registry  string
 }

@@ -1,4 +1,4 @@
-package client
+package httputil
 
 import (
 	"bytes"

@@ -14,7 +14,7 @@ import (
 	"github.com/model-ci/apack/internal/log"
 	"github.com/model-ci/apack/internal/spec"
 	"github.com/model-ci/apack/internal/task"
-	"github.com/model-ci/apack/internal/utils"
+	"github.com/model-ci/apack/pkg/utils"
 	"github.com/model-ci/apack/pkg/distribution"
 	"github.com/model-ci/apack/pkg/layerdb"
 	"github.com/model-ci/apack/pkg/progress"
@@ -238,7 +238,7 @@ func (l *local) pushLayer(ctx context.Context, ref string, remote registry.Repos
 
 		diffid := artifact.FindDiffid(filename)
 		if diffid == spec.Nil {
-			return fmt.Errorf("diffid not found for %s, %+v", filename, artifact.Package)
+			return fmt.Errorf("diffid not found for %s", filename)
 		}
 
 		diff, err := l.Snapdiff(ctx)

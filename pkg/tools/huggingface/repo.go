@@ -10,7 +10,7 @@ import (
 
 	"github.com/model-ci/apack/internal/log"
 	"github.com/model-ci/apack/internal/transfer"
-	"github.com/model-ci/apack/internal/utils"
+	"github.com/model-ci/apack/pkg/utils"
 	"github.com/model-ci/apack/pkg/distribution"
 	"github.com/model-ci/apack/pkg/layerdb"
 	"github.com/model-ci/apack/pkg/progress"

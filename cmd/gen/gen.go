@@ -11,7 +11,8 @@ import (
 	"github.com/model-ci/apack/internal/api/base"
 	"github.com/model-ci/apack/internal/spec"
 	"github.com/model-ci/apack/internal/types"
-	"github.com/model-ci/apack/internal/utils"
+	"github.com/model-ci/apack/pkg/utils"
+	"github.com/model-ci/apack/pkg/client"
 	"github.com/urfave/cli/v2"
 )
 
@@ -70,7 +71,7 @@ apack gen --name "my-ai-model" --desc "Transformer-based text classification mod
 
 type Gen struct {
 	ctx       context.Context
-	client    *utils.Client
+	client    *client.BaseClient
 	workspace string
 	overwrite bool
 	name      string
@@ -91,7 +92,7 @@ func NewGen(ctx *cli.Context) (*Gen, error) {
 
 func (g *Gen) completeAndValidate() error {
 	var err error
-	g.client, err = utils.NewDefaultClient(g.host)
+	g.client, err = client.NewDefaultCLI(g.host)
 	if err != nil {
 		return err
 	}

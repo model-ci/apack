@@ -7,7 +7,7 @@ import (
 	"github.com/model-ci/apack/internal/api/base"
 	"github.com/model-ci/apack/internal/spec"
 	"github.com/model-ci/apack/internal/types"
-	"github.com/model-ci/apack/internal/utils"
+	"github.com/model-ci/apack/pkg/client"
 	"github.com/urfave/cli/v2"
 	"oras.land/oras-go/v2/registry"
 )
@@ -40,7 +40,7 @@ Examples:
 
 type Info struct {
 	ctx       context.Context
-	client    *utils.Client
+	client    *client.BaseClient
 	Format    string
 	tag       string
 	reference registry.Reference
@@ -65,7 +65,7 @@ func NewInfo(ctx *cli.Context) (*Info, error) {
 
 func (i *Info) completeAndValidate() error {
 	var err error
-	i.client, err = utils.NewDefaultClient(i.host)
+	i.client, err = client.NewDefaultCLI(i.host)
 	if err != nil {
 		return err
 	}

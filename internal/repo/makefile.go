@@ -7,7 +7,7 @@ import (
 	"path/filepath"
 
 	"github.com/model-ci/apack/internal/spec"
-	"github.com/model-ci/apack/internal/utils"
+	"github.com/model-ci/apack/pkg/utils"
 	"github.com/model-ci/apack/pkg/distribution"
 	"github.com/model-ci/apack/pkg/layerdb"
 	modelspec "github.com/modelpack/model-spec/specs-go/v1"
