@@ -9,12 +9,13 @@ import (
 	"github.com/model-ci/apack/internal/log"
 	"github.com/model-ci/apack/internal/runtime/infer"
 	"github.com/model-ci/apack/internal/spec"
+	"github.com/model-ci/apack/internal/types"
 	"github.com/model-ci/apack/pkg/distribution"
 	"github.com/model-ci/apack/pkg/layerdb"
 )
 
 type Runtime interface {
-	Run(ctx context.Context, ref, path string, models []spec.Model) error
+	Run(ctx context.Context, path string, models []spec.Model, parmas *types.Params) error
 	Kill(ctx context.Context, id string) error
 	Ps(ctx context.Context) (*States, error)
 }
@@ -47,7 +48,7 @@ func New(d distribution.Distribution, workspace string) (Runtime, error) {
 	return rt, nil
 }
 
-func (r *runtime) Run(ctx context.Context, ref, path string, models []spec.Model) error {
+func (r *runtime) Run(ctx context.Context, path string, models []spec.Model, params *types.Params) error {
 	if models == nil || len(models) > 1 {
 		log.Logger.Debug("Only one model can be run at a time")
 		return fmt.Errorf("only one model can be run at a time")
@@ -63,12 +64,14 @@ func (r *runtime) Run(ctx context.Context, ref, path string, models []spec.Model
 		return err
 	}
 
-	proc, desc, err := r.Infer.Spawning(&infer.Params{
-		ID:        modelid,
-		ModelPath: modelpath,
-		Port:      pp.Port1,
-		Reference: ref,
-	})
+	params.ID = modelid
+	params.ModelPath = modelpath
+
+	if params.Port < 0 {
+		params.Port = pp.Port1
+	}
+
+	proc, desc, err := r.Infer.Spawning(params)
 	if err != nil {
 		return err
 	}
@@ -83,17 +86,18 @@ func (r *runtime) Run(ctx context.Context, ref, path string, models []spec.Model
 		return err
 	}
 
-	_, _, err = r.Distribution.Manifest(ctx, ref)
+	_, _, err = r.Distribution.Manifest(ctx, params.Refer)
 	if err != nil {
+		log.Logger.Error(err)
 		return err
 	}
 
 	st := &State{
 		ID:         shortid(modelid),
-		ModelImage: ref,
+		ModelImage: params.Refer,
 		CreateAt:   time.Now(),
 		Endpoints: []string{
-			fmt.Sprintf(":%d", pp.Port1),
+			fmt.Sprintf(":%d", params.Port),
 			fmt.Sprintf(":%s", "--"),
 		},
 		Descriptor: desc,
@@ -103,13 +107,14 @@ func (r *runtime) Run(ctx context.Context, ref, path string, models []spec.Model
 
 	stateBytes, err := st.MarshalJSON()
 	if err != nil {
+		log.Logger.Error(err)
 		return err
 	}
 
 	stateDesc := layerdb.ConfigDesc(stateBytes, OCIAnnotationRuntimeState)
 	stateDesc.Data = stateBytes
 
-	return r.Distribution.State(ctx, ref, stateDesc)
+	return r.Distribution.State(ctx, params.Refer, stateDesc)
 }
 
 func (r *runtime) Kill(ctx context.Context, id string) error {
@@ -174,7 +179,8 @@ func (r *runtime) Ps(ctx context.Context) (*States, error) {
 
 		proc, exist := r.Status(st.ID)
 		if !exist {
-			return nil, fmt.Errorf("runtime %s not found", st.ID)
+			log.Logger.Warnf("runtime %s not found", st.ID)
+			continue
 		}
 
 		if proc.IsRunning() {

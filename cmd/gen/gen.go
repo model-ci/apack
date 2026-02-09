@@ -11,8 +11,8 @@ import (
 	"github.com/model-ci/apack/internal/api/base"
 	"github.com/model-ci/apack/internal/spec"
 	"github.com/model-ci/apack/internal/types"
-	"github.com/model-ci/apack/pkg/utils"
 	"github.com/model-ci/apack/pkg/client"
+	"github.com/model-ci/apack/pkg/utils"
 	"github.com/urfave/cli/v2"
 )
 

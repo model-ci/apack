@@ -13,17 +13,18 @@ import (
 	"time"
 
 	"github.com/model-ci/apack/internal/log"
+	"github.com/model-ci/apack/internal/types"
 )
 
 type LlamaCppInfer struct {
-	*Params
+	*types.Params
 
 	wg         sync.WaitGroup
 	cmd        *exec.Cmd
 	cancelFunc context.CancelFunc
 }
 
-func NewLlamaCppInfer(p *Params) (Proc, error) {
+func NewLlamaCppInfer(p *types.Params) (Proc, error) {
 	if err := p.Validate(); err != nil {
 		return nil, err
 	}
@@ -79,8 +80,13 @@ func (l *LlamaCppInfer) Exec(ctx context.Context) error {
 		"-t", fmt.Sprintf("%d", l.Threads),
 		"-ngl", fmt.Sprintf("%d", l.GpuLayers),
 	}
+
 	if !l.Verbose {
 		args = append(args, "--log-disable")
+	}
+
+	if l.Embeddings {
+		args = append(args, "--embeddings")
 	}
 
 	exePath := l.ExecutablePath
@@ -106,7 +112,6 @@ func (l *LlamaCppInfer) Exec(ctx context.Context) error {
 		"CC=clang",
 		"CXX=clang++",
 		"SHELL=/bin/sh",
-		// Add other env vars if needed
 	}
 
 	// Create a new session group (Setsid) to detach from the terminal
@@ -155,108 +160,6 @@ func (l *LlamaCppInfer) Exec(ctx context.Context) error {
 	return nil
 }
 
-/*
-	func (l *LlamaCppInfer) Exec(context.Context) error {
-		// 1. Check if the service is already running
-		if l.PidFile != "" {
-			if isRunning(l.PidFile) {
-				return fmt.Errorf("service appears to be already running (check PID file: %s)", l.PidFile)
-			}
-		}
-
-		ctx, cancel := context.WithCancel(context.Background())
-		l.cancelFunc = cancel
-
-		// 2. Prepare log file
-		var logWriter io.Writer
-		if l.LogFile != "" {
-			if err := ensureDir(l.LogFile); err != nil {
-				cancel()
-				return err
-			}
-			// Open log file in append mode
-			f, err := os.OpenFile(l.LogFile, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
-			if err != nil {
-				cancel()
-				return err
-			}
-			// Write session start timestamp
-			timestamp := time.Now().Format("2006-01-02 15:04:05")
-			f.WriteString(fmt.Sprintf("\n--- [%s] Process Started ---\n", timestamp))
-			logWriter = f
-		}
-
-		// 3. Prepare PID directory
-		if l.PidFile != "" {
-			if err := ensureDir(l.PidFile); err != nil {
-				cancel()
-				return err
-			}
-		}
-
-		// 4. Construct arguments
-		args := []string{
-			"-m", l.ModelPath,
-			"--port", fmt.Sprintf("%d", l.Port),
-			"-c", fmt.Sprintf("%d", l.CtxSize),
-			"-t", fmt.Sprintf("%d", l.Threads),
-			"-ngl", fmt.Sprintf("%d", l.GpuLayers),
-		}
-		if !l.Verbose {
-			args = append(args, "--log-disable")
-		}
-
-		exePath := l.ExecutablePath
-		if exePath == "" {
-
-			exePath = GetDefaultExecutableName()
-		}
-
-		l.cmd = exec.CommandContext(ctx, exePath, args...)
-		l.cmd.Env = []string{
-			"PATH=" + os.Getenv("PATH"),
-			"HOME=" + os.Getenv("HOME"),
-			"USER=" + os.Getenv("USER"),
-			"LANG=" + os.Getenv("LANG"),
-			"LC_ALL=C",
-			"TMPDIR=/tmp",
-			"CGO_ENABLED=1",
-			"CC=clang",
-			"CXX=clang++",
-			"SHELL=/bin/sh",
-			"CLI_CONTEXT=",
-			"URFAVE_CLI_VERSION=",
-			"COBRA_SILENCE_USAGE=",
-		}
-
-		setProcessGroup(l.cmd)
-
-		stdoutPipe, _ := l.cmd.StdoutPipe()
-		stderrPipe, _ := l.cmd.StderrPipe()
-
-		log.Logger.Debugf("Starting process: %s", exePath)
-
-		if err := l.cmd.Start(); err != nil {
-			cancel()
-			return fmt.Errorf("failed to start process: %v", err)
-		}
-
-		// 5. Write PID to file
-		pid := l.cmd.Process.Pid
-		if l.PidFile != "" {
-			if err := os.WriteFile(l.PidFile, []byte(strconv.Itoa(pid)), 0644); err != nil {
-				fmt.Printf("Warning: failed to write PID file: %v\n", err)
-			}
-		}
-
-		// 6. Handle logs in background goroutines
-		l.wg.Add(2)
-		go func() { defer l.wg.Done(); streamOutput(stdoutPipe, "STDOUT", logWriter) }()
-		go func() { defer l.wg.Done(); streamOutput(stderrPipe, "STDERR", logWriter) }()
-
-		return nil
-	}
-*/
 func (l *LlamaCppInfer) IsRunning() bool {
 	return isRunning(l.PidFile)
 }

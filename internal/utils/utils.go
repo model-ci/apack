@@ -44,7 +44,6 @@ func ParseSize(s, unit string) (int, error) {
 	return -1, fmt.Errorf("can not parse %q as num[gGmMkK]:%w", s, strconv.ErrSyntax)
 }
 
-
 func SafeGo(fn func()) {
 	go func() {
 		defer func() {
@@ -148,4 +147,3 @@ func WriteJSON(w http.ResponseWriter, jm json.Marshaler, statusCode int) {
 
 	w.Write(response)
 }
-

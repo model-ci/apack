@@ -9,11 +9,11 @@ import (
 	"time"
 
 	"github.com/model-ci/apack/internal/log"
-	"github.com/model-ci/apack/pkg/utils"
 	"github.com/model-ci/apack/pkg/distribution"
 	"github.com/model-ci/apack/pkg/layerdb"
 	"github.com/model-ci/apack/pkg/progress"
 	"github.com/model-ci/apack/pkg/tools"
+	"github.com/model-ci/apack/pkg/utils"
 	oci "github.com/opencontainers/image-spec/specs-go/v1"
 	"golang.org/x/sync/errgroup"
 	"golang.org/x/sync/semaphore"

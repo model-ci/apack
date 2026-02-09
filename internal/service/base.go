@@ -250,17 +250,14 @@ func (b *BaseService) Run(ctx context.Context, req *types.Request) (*types.Respo
 		return nil, err
 	}
 
-	log.Logger.Debugf("artifact: %+v", artifact)
-
 	diff, err := b.distribution.Snapdiff(ctx)
 	if err != nil {
 		return nil, err
 	}
 
-	log.Logger.Debugf("diff: %s", diff)
-
-	err = b.runtime.Run(ctx, req.ReferenceStr, diff, artifact.Package.Models)
+	err = b.runtime.Run(ctx, diff, artifact.Package.Models, &req.Params)
 	if err != nil {
+		log.Logger.Error(err)
 		return nil, err
 	}
 

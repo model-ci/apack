@@ -77,7 +77,7 @@ func (c *Client) Watcher(ctx context.Context, taskID, operation string) (<-chan 
 
 func (c *Client) watcherStream(ctx context.Context, taskID, operation string) (<-chan *task.Event, error) {
 	u := fmt.Sprintf("%s/base/v1/tasks/%s/stream", c.serverURL, taskID)
-	
+
 	dialCtx, cancel := context.WithTimeout(ctx, 60*time.Second)
 	defer cancel()
 
@@ -117,9 +117,9 @@ func (c *Client) watcherStream(ctx context.Context, taskID, operation string) (<
 					log.Logger.Infof("WebSocket connection closed normally")
 					return
 				}
-				
+
 				log.Logger.Errorf("WebSocket read error: %v", err)
-				
+
 				select {
 				case ch <- &task.Event{
 					Type:    task.EventError,

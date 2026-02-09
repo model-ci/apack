@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"path/filepath"
 
+	"github.com/model-ci/apack/internal/types"
 	"github.com/model-ci/apack/pkg/layerdb"
 	"github.com/opencontainers/go-digest"
 	oci "github.com/opencontainers/image-spec/specs-go/v1"
@@ -29,9 +30,9 @@ func New(cfg *Config) (*Infer, error) {
 		procs: make(map[string]Proc)}, nil
 }
 
-func (i *Infer) Spawning(p *Params) (Proc, oci.Descriptor, error) {
-	p.PidFile = filepath.Join(i.Config.PidPath, p.Reference, p.ID)
-	p.LogFile = filepath.Join(i.Config.LogPath, p.Reference, p.ID)
+func (i *Infer) Spawning(p *types.Params) (Proc, oci.Descriptor, error) {
+	p.PidFile = filepath.Join(i.Config.PidPath, p.Refer, p.ID)
+	p.LogFile = filepath.Join(i.Config.LogPath, p.Refer, p.ID)
 
 	proc, err := NewLlamaCppInfer(p)
 	if err != nil {
@@ -52,7 +53,7 @@ func (i *Infer) Spawning(p *Params) (Proc, oci.Descriptor, error) {
 		Size:      int64(len(paramBytes)),
 		Data:      paramBytes,
 		Annotations: map[string]string{
-			layerdb.OCIAnnotationRefName: p.Reference,
+			layerdb.OCIAnnotationRefName: p.Refer,
 		},
 	}, nil
 }

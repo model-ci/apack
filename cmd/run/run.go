@@ -28,10 +28,41 @@ Examples:
 			Name:  "name",
 			Usage: "Assign a name to the runtime model",
 		},
-		&cli.StringSliceFlag{
+		&cli.IntFlag{
 			Name:    "port",
+			Value:   -1,
 			Aliases: []string{"p"},
 			Usage:   "Publish a model runtime's port(s) to the host",
+		},
+		&cli.IntFlag{
+			Name:    "threads",
+			Value:   2,
+			Aliases: []string{"t"},
+			Usage:   "Number of CPU threads to use during generation",
+		},
+		&cli.IntFlag{
+			Name:    "gpu-layers",
+			Value:   0,
+			Aliases: []string{"ngl"},
+			Usage:   "max. number of layers to store in VRAM, either an exact number 'auto', or 'all' (default: auto)",
+		},
+		&cli.IntFlag{
+			Name:    "ctx-size",
+			Value:   4096,
+			Aliases: []string{"c"},
+			Usage:   "size of the prompt context (default: 0, 0 = loaded from model)",
+		},
+		&cli.BoolFlag{
+			Name:    "embeddings",
+			Value:   false,
+			Aliases: []string{"e"},
+			Usage:   "restrict to only support embedding use case; use only with dedicated embedding models (default: disabled)",
+		},
+		&cli.BoolFlag{
+			Name:    "log-enable",
+			Value:   true,
+			Aliases: []string{"l"},
+			Usage:   "log enable",
 		},
 		&cli.BoolFlag{
 			Name:    "quiet",
@@ -49,16 +80,22 @@ Examples:
 }
 
 type Run struct {
-	ctx       context.Context
-	client    *client.BaseClient
-	Reference registry.Reference
-	Image     string
-	Command   []string
-	Name      string
-	Ports     []string
-	host      string
-	Quiet     bool
-	operation string
+	ctx        context.Context
+	client     *client.BaseClient
+	Reference  registry.Reference
+	Image      string
+	Command    []string
+	Name       string
+	Port       int
+	host       string
+	Threads    int
+	GpuLayers  int
+	CtxSize    int
+	Verbose    bool
+	Embeddings bool
+	LogEnable  bool
+	Quiet      bool
+	operation  string
 }
 
 func NewRun(ctx *cli.Context) (*Run, error) {
@@ -73,8 +110,14 @@ func NewRun(ctx *cli.Context) (*Run, error) {
 	}
 
 	run.Name = ctx.String("name")
-	run.Ports = ctx.StringSlice("port")
+	run.Port = ctx.Int("port")
 	run.host = ctx.String("host")
+	run.Threads = ctx.Int("threads")
+	run.GpuLayers = ctx.Int("gpu-layers")
+	run.CtxSize = ctx.Int("ctx-size")
+	run.Embeddings = ctx.Bool("embeddings")
+	run.LogEnable = ctx.Bool("log-enable")
+	run.Quiet = ctx.Bool("quiet")
 
 	return run, run.completeAndValidate()
 }
@@ -103,6 +146,15 @@ func (r *Run) completeAndValidate() error {
 
 func (r *Run) Run() error {
 	req := types.Request{
+		Params: types.Params{
+			Port:       r.Port,
+			Refer:      r.Reference.String(),
+			Threads:    r.Threads,
+			GpuLayers:  r.GpuLayers,
+			CtxSize:    r.CtxSize,
+			Verbose:    r.LogEnable,
+			Embeddings: r.Embeddings,
+		},
 		Reference:    r.Reference,
 		ReferenceStr: r.Reference.String(),
 	}

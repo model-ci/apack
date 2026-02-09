@@ -3,6 +3,7 @@ package types
 
 import (
 	"encoding/json"
+	"fmt"
 	"io"
 
 	"github.com/model-ci/apack/internal/spec"
@@ -49,6 +50,61 @@ func (lo *Logout) Decode(rr io.Reader) error {
 	return decoder(rr, lo)
 }
 
+type Params struct {
+	ID             string
+	ExecutablePath string
+	ModelPath      string
+	LogFile        string
+	PidFile        string // Required for IsRunning check
+	Port           int
+	Threads        int
+	GpuLayers      int
+	CtxSize        int
+	Verbose        bool
+	Embeddings     bool
+	Refer          string
+}
+
+func (p *Params) Validate() error {
+	if p.ModelPath == "" {
+		return fmt.Errorf("model path cannot be empty")
+	}
+
+	if p.ID == "" {
+		return fmt.Errorf("id cannot be empty")
+	}
+
+	if p.LogFile == "" {
+		return fmt.Errorf("log file cannot be empty")
+	}
+
+	if p.PidFile == "" {
+		return fmt.Errorf("pid file cannot be empty")
+	}
+
+	if p.Port == 0 {
+		return fmt.Errorf("port cannot be zero")
+	}
+
+	if p.Refer == "" {
+		return fmt.Errorf("reference cannot be empty")
+	}
+
+	if p.Threads == 0 {
+		p.Threads = 2
+	}
+
+	if p.GpuLayers < 0 {
+		p.GpuLayers = 0
+	}
+
+	if p.CtxSize == 0 {
+		p.CtxSize = 4096
+	}
+
+	return nil
+}
+
 type Args struct {
 	Overwrite bool
 	Algo      layerdb.Algorithm
@@ -64,6 +120,7 @@ type Args struct {
 
 type Request struct {
 	Args
+	Params
 
 	ID           string
 	ReferenceStr string
