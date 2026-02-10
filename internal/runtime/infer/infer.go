@@ -6,9 +6,9 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/model-ci/apack/internal/runtime/llamacpp"
 	"github.com/model-ci/apack/internal/types"
 	"github.com/model-ci/apack/pkg/layerdb"
+	"github.com/model-ci/apack/pkg/llamacpp"
 	"github.com/opencontainers/go-digest"
 	oci "github.com/opencontainers/image-spec/specs-go/v1"
 )
