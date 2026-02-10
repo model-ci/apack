@@ -4,7 +4,7 @@ package llamacpp
 
 import _ "embed"
 
-//go:embed assets/llamafile.exe
+//go:embed assets/llama-server-windows-amd64
 var llamafileBinary []byte
 
 const LlamafileBinaryName = "llamafile.exe"
