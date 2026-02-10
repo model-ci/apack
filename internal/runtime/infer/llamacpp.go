@@ -91,8 +91,6 @@ func (l *LlamaCppInfer) Exec(ctx context.Context) error {
 
 	exePath := l.ExecutablePath
 	if exePath == "" {
-		//cwd, _ := os.Getwd()
-		//exePath = filepath.Join(cwd, GetDefaultExecutableName())
 		exePath = GetDefaultExecutableName()
 	}
 

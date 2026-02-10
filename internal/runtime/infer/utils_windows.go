@@ -4,12 +4,19 @@
 package infer
 
 import (
+	"os"
 	"os/exec"
 	"syscall"
+
+	"github.com/model-ci/apack/internal/types"
 )
 
 // GetDefaultExecutableName returns the executable name for Windows.
 func GetDefaultExecutableName() string {
+	path := os.Getenv(types.ENV_LLAMACPP_BINARY_PATH)
+	if path != "" {
+		return path
+	}
 	return "llama-server.exe"
 }
 

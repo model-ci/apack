@@ -9,10 +9,16 @@ import (
 	"os/exec"
 	"strings"
 	"syscall"
+
+	"github.com/model-ci/apack/internal/types"
 )
 
 // GetDefaultExecutableName returns the executable name for Unix-like systems.
 func GetDefaultExecutableName() string {
+	path := os.Getenv(types.ENV_LLAMACPP_BINARY_PATH)
+	if path != "" {
+		return path
+	}
 	return "llama-server"
 }
 

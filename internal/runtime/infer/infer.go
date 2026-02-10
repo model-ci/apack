@@ -3,8 +3,10 @@ package infer
 import (
 	"context"
 	"fmt"
+	"os"
 	"path/filepath"
 
+	"github.com/model-ci/apack/internal/runtime/llamacpp"
 	"github.com/model-ci/apack/internal/types"
 	"github.com/model-ci/apack/pkg/layerdb"
 	"github.com/opencontainers/go-digest"
@@ -26,6 +28,25 @@ func New(cfg *Config) (*Infer, error) {
 	if err := cfg.Validate(); err != nil {
 		return nil, err
 	}
+	binpath := filepath.Join(cfg.BasePath, "bin")
+	if err := os.MkdirAll(binpath, 0o755); err != nil {
+		return nil, err
+	}
+
+	manager, err := llamacpp.NewManager(binpath)
+	if err != nil {
+		return nil, err
+	}
+
+	binary, err := manager.GenBinaryPath()
+	if err != nil {
+		return nil, err
+	}
+
+	if err := manager.SetBinaryPath(binary); err != nil {
+		return nil, err
+	}
+
 	return &Infer{Config: cfg,
 		procs: make(map[string]Proc)}, nil
 }

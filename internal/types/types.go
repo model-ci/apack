@@ -18,6 +18,10 @@ const (
 )
 
 const (
+	ENV_LLAMACPP_BINARY_PATH = "APACK_LLAMACPP_BINARY_PATH"
+)
+
+const (
 	Byte = 1
 	KB   = 1 << (10 * iota) // 1 << (10 * 1) = 1024
 	MB                      // 1 << (10 * 2) = 1,048,576
