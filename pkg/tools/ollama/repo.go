@@ -45,7 +45,7 @@ func (o *ollamaRepo) Resolve(ctx context.Context, tag string) (oci.Descriptor, e
 }
 
 func resolve(ctx context.Context, repo *remote.Repository, tag string) (oci.Descriptor, []byte, error) {
-	url := buildRepositoryManifestURL(repo.PlainHTTP, repo.Reference)
+	url := utils.BuildRepositoryManifestURL(repo.PlainHTTP, repo.Reference)
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
 	if err != nil {
 		return oci.Descriptor{}, nil, err
@@ -91,11 +91,11 @@ func (o *ollamaRepo) Fetch(ctx context.Context, target oci.Descriptor, diffid di
 	ref := o.Reference
 	ref.Reference = target.Digest.String()
 	ctx = auth.AppendRepositoryScope(ctx, ref, auth.ActionPull)
-	url := buildRepositoryBlobURL(o.PlainHTTP, ref)
+	url := utils.BuildRepositoryBlobURL(o.PlainHTTP, ref)
 
 	log.Logger.Debugf("Ollama fetching from %s", url)
 
-	finalURL, err := getFinalDownloadURL(ctx, url)
+	finalURL, err := utils.GetFinalDownloadURL(ctx, url)
 	if err != nil {
 		log.Logger.Warnf("Redirect check failed for %s, falling back to original: %v", url, err)
 		finalURL = url

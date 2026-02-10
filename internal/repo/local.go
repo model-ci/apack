@@ -60,6 +60,12 @@ func (l *local) Pull(ctx context.Context, remote registry.Repository, ref regist
 		return oci.DescriptorEmptyJSON, err
 	}
 
+	artifact := &spec.Artifact{}
+	err = artifact.UnmarshalJSON(manifest.Config.Data)
+	if err != nil {
+		return oci.DescriptorEmptyJSON, err
+	}
+
 	toPull := manifest.Layers
 	toPull = append(toPull, manifest.Config, desc)
 	sem := semaphore.NewWeighted(int64(opts.Concurrency))
@@ -71,6 +77,15 @@ func (l *local) Pull(ctx context.Context, remote registry.Repository, ref regist
 		}
 		return fmt.Errorf("failed to get %+v layer: %w", desc, err)
 	}
+
+	snapDiff, err := l.Snapdiff(ctx)
+	if err != nil {
+		return oci.DescriptorEmptyJSON, err
+	}
+
+	refs := ref.String()
+
+	path := l.Snappath(ctx, refs)
 
 	var semErr error
 	pulledDigests := map[string]bool{}
@@ -98,7 +113,7 @@ func (l *local) Pull(ctx context.Context, remote registry.Repository, ref regist
 			if pullDescIndex < layers {
 				diffid = config.RootFS.DiffIDs[pullDescIndex]
 			}
-			return fmtErr(pullDesc, l.pullLayer(errCtx, remote, pullDesc, diffid, ref.String(), pw))
+			return fmtErr(pullDesc, l.pullLayer(errCtx, remote, pullDesc, diffid, snapDiff, ref.String(), artifact, pw))
 		})
 	}
 	if err := errs.Wait(); err != nil {
@@ -111,11 +126,16 @@ func (l *local) Pull(ctx context.Context, remote registry.Repository, ref regist
 	if !pullProgress.CheckAllCompleted() {
 		return oci.DescriptorEmptyJSON, fmt.Errorf("failed to pull all layers")
 	}
+	
+	err = artifact.MarshalYAMLToPath(path)
+	if err != nil {
+		return oci.DescriptorEmptyJSON, err
+	}
 
-	return desc, l.db.Index(ctx, ref.String(), desc)
+	return desc, l.db.Index(ctx, refs, desc)
 }
 
-func (l *local) pullLayer(ctx context.Context, remote registry.Repository, desc oci.Descriptor, diffid digest.Digest, ref string, pw *progress.ProgressWriter) error {
+func (l *local) pullLayer(ctx context.Context, remote registry.Repository, desc oci.Descriptor, diffid digest.Digest, snapdiff, ref string, artifact *spec.Artifact, pw *progress.ProgressWriter) error {
 	if exists, err := l.db.Exists(ctx, desc); err != nil {
 		return fmt.Errorf("failed to check local storage: %w", err)
 	} else if exists {
@@ -130,7 +150,7 @@ func (l *local) pullLayer(ctx context.Context, remote registry.Repository, desc 
 
 	pmt := layerdb.ParseMediaType(desc.MediaType)
 	if pmt.IsTar {
-		err := l.extract(ctx, desc, diffid, l.Snappath(ctx, ref), blob, pw)
+		err := l.extract(ctx, desc, diffid, snapdiff, blob, artifact, pw)
 		if err != nil {
 			return err
 		}
@@ -524,7 +544,7 @@ func (l *local) Sink(ctx context.Context, dir string, reference string, plog *pr
 		errs.Go(func() error {
 			defer sem.Release(1)
 			return fmtErr(layerDesc,
-				l.sinkLayers(errCtx, layerDesc, artifact, snapRef, snapDiff, dir, pw))
+				l.sinkLayers(errCtx, layerDesc, artifact, snapDiff, dir, pw))
 		})
 	}
 
@@ -543,7 +563,7 @@ func (l *local) Sink(ctx context.Context, dir string, reference string, plog *pr
 	return nil
 }
 
-func (l *local) sinkLayers(ctx context.Context, desc oci.Descriptor, artifact *spec.Artifact, snapref, snapdiff, dir string, pw *progress.ProgressWriter) error {
+func (l *local) sinkLayers(ctx context.Context, desc oci.Descriptor, artifact *spec.Artifact, snapdiff, dir string, pw *progress.ProgressWriter) error {
 	filename := desc.Annotations[modelspec.AnnotationFilepath]
 	diffid := filepath.Join(snapdiff, artifact.FindDiffid(filename))
 	difffile, err := os.Open(diffid)
@@ -618,7 +638,7 @@ func (l *local) Extract(ctx context.Context, dir string, reference string, plog 
 		errs.Go(func() error {
 			defer sem.Release(1)
 			return fmtErr(layerDesc,
-				l.extract(errCtx, layerDesc, config.RootFS.DiffIDs[layerIndex], dir, nil, pw))
+				l.extract(errCtx, layerDesc, config.RootFS.DiffIDs[layerIndex], dir, nil, nil, pw))
 		})
 	}
 
@@ -637,13 +657,14 @@ func (l *local) Extract(ctx context.Context, dir string, reference string, plog 
 	return nil
 }
 
-func (l *local) extract(ctx context.Context, desc oci.Descriptor, diffid digest.Digest, dir string, content io.ReadCloser, pw *progress.ProgressWriter) error {
+func (l *local) extract(ctx context.Context, desc oci.Descriptor, diffid digest.Digest, dir string, content io.ReadCloser, artifact *spec.Artifact, pw *progress.ProgressWriter) error {
 	path := desc.Annotations[modelspec.AnnotationFilepath]
 	cont, err := l.db.Content(ctx, desc, diffid, content, true)
 	if err != nil {
 		return err
 	}
-	return l.extractLayer(ctx, filepath.Join(dir, path), cont, pw)
+	difffile := artifact.FindDiffid(path)
+	return l.extractLayer(ctx, filepath.Join(dir, difffile), cont, pw)
 }
 
 func (l *local) extractLayer(ctx context.Context, path string, src io.Reader, pw *progress.ProgressWriter) error {

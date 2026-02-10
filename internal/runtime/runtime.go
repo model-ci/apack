@@ -49,9 +49,12 @@ func New(d distribution.Distribution, workspace string) (Runtime, error) {
 }
 
 func (r *runtime) Run(ctx context.Context, path string, models []spec.Model, params *types.Params) error {
-	if models == nil || len(models) > 1 {
-		log.Logger.Debug("Only one model can be run at a time")
-		return fmt.Errorf("only one model can be run at a time")
+	if models == nil {
+		return fmt.Errorf("not found models")
+	}
+
+	if len(models) > 1 {
+		log.Logger.Warnf("only one model can be run at a time, models: %d", len(models))
 	}
 
 	modelid := models[0].ID
