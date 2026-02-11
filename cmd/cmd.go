@@ -158,5 +158,6 @@ func Execute(name, usage, ver, commit string) {
 
 	if err := app.Run(os.Args); err != nil {
 		fmt.Println(err)
+		os.Exit(1)
 	}
 }

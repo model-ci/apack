@@ -52,7 +52,9 @@ func NewBaseService(path string, m *task.Manager, config *Config) (*BaseService,
 		return nil, err
 	}
 
-	t, err := tools.NewTools(db, d, config.Concurrency)
+	log.Logger.Debugf("no proxy status: %+v", config.NoProxy)
+
+	t, err := tools.NewTools(db, d, config.Concurrency, config.NoProxy)
 	if err != nil {
 		return nil, err
 	}

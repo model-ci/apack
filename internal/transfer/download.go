@@ -30,6 +30,7 @@ type Downloader struct {
 	TotalSize   int64
 	Concurrency int
 	MaxRetries  int
+	Proxy       bool
 	Client      *http.Client
 	Progress    *progress.ProgressWriter
 }
@@ -64,6 +65,12 @@ func WithClient(client *http.Client) DownloadOption {
 	}
 }
 
+func WithProxy() DownloadOption {
+	return func(d *Downloader) {
+		d.Proxy = true
+	}
+}
+
 // NewDownloader creates a Downloader with optional progress tracking and functional options.
 func NewDownloader(url, destPath string, totalSize int64, pw *progress.ProgressWriter, opts ...DownloadOption) *Downloader {
 	// Initialize with default values
@@ -74,13 +81,18 @@ func NewDownloader(url, destPath string, totalSize int64, pw *progress.ProgressW
 		Concurrency: DefaultConcurrency,
 		MaxRetries:  DefaultMaxRetries,
 		Progress:    pw,
-		Client:      createOptimizedClient(),
 	}
 
 	// Apply all options
 	for _, opt := range opts {
 		opt(d)
 	}
+
+	if d.Client == nil {
+		d.Client = createOptimizedClient(d.Proxy)
+	}
+
+	log.Logger.Debugf("downloader proxy status: %+v", d.Proxy)
 
 	return d
 }
@@ -331,24 +343,29 @@ func (d *Downloader) getPartFilename(index int) string {
 }
 
 // createOptimizedClient configures timeouts specifically for large file downloads
-func createOptimizedClient() *http.Client {
+func createOptimizedClient(proxy bool) *http.Client {
+	transport := &http.Transport{
+		Proxy: nil,
+		DialContext: (&net.Dialer{
+			Timeout:   30 * time.Second, // Max time to establish TCP connection
+			KeepAlive: 30 * time.Second,
+		}).DialContext,
+		ForceAttemptHTTP2:     true,
+		MaxIdleConns:          100,
+		IdleConnTimeout:       90 * time.Second, // Close connection if idle for 90s
+		TLSHandshakeTimeout:   10 * time.Second,
+		ExpectContinueTimeout: 1 * time.Second,
+		ResponseHeaderTimeout: 30 * time.Second, // Max time to wait for server first byte
+	}
+
+	if proxy {
+		transport.Proxy = http.ProxyFromEnvironment
+	}
+
 	return &http.Client{
 		// IMPORTANT: Set to 0 (no limit) to allow large file downloads to complete.
 		// A fixed timeout (e.g. 60s) would kill the connection even if data is flowing.
-		Timeout: 0,
-
-		Transport: &http.Transport{
-			Proxy: http.ProxyFromEnvironment,
-			DialContext: (&net.Dialer{
-				Timeout:   30 * time.Second, // Max time to establish TCP connection
-				KeepAlive: 30 * time.Second,
-			}).DialContext,
-			ForceAttemptHTTP2:     true,
-			MaxIdleConns:          100,
-			IdleConnTimeout:       90 * time.Second, // Close connection if idle for 90s
-			TLSHandshakeTimeout:   10 * time.Second,
-			ExpectContinueTimeout: 1 * time.Second,
-			ResponseHeaderTimeout: 30 * time.Second, // Max time to wait for server first byte
-		},
+		Timeout:   0,
+		Transport: transport,
 	}
 }

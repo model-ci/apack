@@ -25,8 +25,10 @@ Examples:
 `,
 	Flags: []cli.Flag{
 		&cli.StringFlag{
-			Name:  "name",
-			Usage: "Assign a name to the runtime model",
+			Name:    "host",
+			Value:   "0.0.0.0",
+			Aliases: []string{"H"},
+			Usage:   "Host to listen on",
 		},
 		&cli.IntFlag{
 			Name:    "port",
@@ -85,9 +87,9 @@ type Run struct {
 	Reference  registry.Reference
 	Image      string
 	Command    []string
-	Name       string
 	Port       int
 	host       string
+	inferHost  string
 	Threads    int
 	GpuLayers  int
 	CtxSize    int
@@ -109,15 +111,20 @@ func NewRun(ctx *cli.Context) (*Run, error) {
 		}
 	}
 
-	run.Name = ctx.String("name")
+	run.inferHost = ctx.String("host")
 	run.Port = ctx.Int("port")
-	run.host = ctx.String("host")
 	run.Threads = ctx.Int("threads")
 	run.GpuLayers = ctx.Int("gpu-layers")
 	run.CtxSize = ctx.Int("ctx-size")
 	run.Embeddings = ctx.Bool("embeddings")
 	run.LogEnable = ctx.Bool("log-enable")
 	run.Quiet = ctx.Bool("quiet")
+
+	lineage := ctx.Lineage()
+	if len(lineage) > 0 {
+		rootCtx := lineage[len(lineage)-1]
+		run.host = rootCtx.String("host")
+	}
 
 	return run, run.completeAndValidate()
 }
@@ -154,6 +161,7 @@ func (r *Run) Run() error {
 			CtxSize:    r.CtxSize,
 			Verbose:    r.LogEnable,
 			Embeddings: r.Embeddings,
+			Host:       r.inferHost,
 		},
 		Reference:    r.Reference,
 		ReferenceStr: r.Reference.String(),

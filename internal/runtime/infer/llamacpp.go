@@ -81,6 +81,10 @@ func (l *LlamaCppInfer) Exec(ctx context.Context) error {
 		"-ngl", fmt.Sprintf("%d", l.GpuLayers),
 	}
 
+	if l.Host != "" {
+		args = append(args, "--host", l.Host)
+	}
+
 	if !l.Verbose {
 		args = append(args, "--log-disable")
 	}

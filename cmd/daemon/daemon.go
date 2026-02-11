@@ -67,6 +67,11 @@ var Command = &cli.Command{
 			Usage: "the concurrents of artifact operations such as building, pushing, pulling, and save",
 			Value: 1,
 		},
+		&cli.BoolFlag{
+			Name:    "no-proxy",
+			Aliases: []string{"np"},
+			Usage:   "Disable proxy",
+		},
 		&cli.IntFlag{
 			Name:  "compress",
 			Usage: "the compression algorithm for the layer, where 0 represents the use of Gzip, 1 represents gzip-fastest, 2 represents zstd, and 3 means no compression",

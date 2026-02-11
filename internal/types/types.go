@@ -66,6 +66,7 @@ type Params struct {
 	CtxSize        int
 	Verbose        bool
 	Embeddings     bool
+	Host           string
 	Refer          string
 }
 

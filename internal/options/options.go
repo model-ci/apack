@@ -58,6 +58,7 @@ func New(ctx *cli.Context) *Options {
 	opts.Secure = getBoolValue(ctx, "secure", oc.Secure, false)
 	opts.Auth = getBoolValue(ctx, "auth", oc.Auth, false)
 	opts.Concurrency = getIntValue(ctx, "concurrency", oc.Concurrency, 1)
+	opts.NoProxy = getBoolValue(ctx, "no-proxy", oc.NoProxy, false)
 	opts.Compress = getIntValue(ctx, "compress", oc.Compress, 0)
 
 	return &opts
@@ -143,6 +144,7 @@ type OptionConfig struct {
 	Secure       bool     `json:"secure,omitempty"`
 	Hosts        []string `json:"hosts,omitempty"`
 	Concurrency  int      `json:"concurrency,omitempty"`
+	NoProxy      bool     `json:"no-proxy,omitempty"`
 	Compress     int      `json:"compress,omitempty"`
 }
 

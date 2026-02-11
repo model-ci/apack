@@ -20,13 +20,13 @@ type Tool interface {
 	Fetch(ctx context.Context, reference string, path string, plog *progress.Logger) (oci.Descriptor, error)
 }
 
-type spawn func(user, password string, concurrency int, db layerdb.DB, dstb distribution.Distribution) (Tool, error)
+type tool func(user, password string, concurrency int, noproxy bool, db layerdb.DB, dstb distribution.Distribution) (Tool, error)
 
-var factory = map[string]spawn{}
+var factory = map[string]tool{}
 
-func Register(name string, s spawn) {
+func Register(name string, t tool) {
 	if _, ok := factory[name]; !ok {
-		factory[name] = s
+		factory[name] = t
 	}
 }
 
@@ -34,14 +34,16 @@ type Tools struct {
 	db          layerdb.DB
 	dstb        distribution.Distribution
 	concurrency int
+	noproxy     bool
 	set         map[string]Tool
 }
 
-func NewTools(db layerdb.DB, dstb distribution.Distribution, concurrency int) (*Tools, error) {
+func NewTools(db layerdb.DB, dstb distribution.Distribution, concurrency int, noproxy bool) (*Tools, error) {
 	return &Tools{
 		db:          db,
 		dstb:        dstb,
 		concurrency: concurrency,
+		noproxy:     noproxy,
 		set:         map[string]Tool{},
 	}, nil
 }
@@ -55,7 +57,7 @@ func (t *Tools) Get(user, password, tool string) (Tool, error) {
 			return nil, fmt.Errorf("unknown tool: %s", tool)
 		}
 
-		tool, err := fn(user, password, t.concurrency, t.db, t.dstb)
+		tool, err := fn(user, password, t.concurrency, t.noproxy, t.db, t.dstb)
 		if err != nil {
 			return nil, err
 		}

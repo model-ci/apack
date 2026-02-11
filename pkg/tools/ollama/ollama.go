@@ -33,13 +33,15 @@ type Ollama struct {
 	username    string
 	password    string
 	concurrency int
+	noproxy     bool
 	db          layerdb.DB
 	dstb        distribution.Distribution
 }
 
-func NewOllama(user, password string, concurrency int, db layerdb.DB, dstb distribution.Distribution) (tools.Tool, error) {
+func NewOllama(user, password string, concurrency int, noproxy bool, db layerdb.DB, dstb distribution.Distribution) (tools.Tool, error) {
 	return &Ollama{
 		concurrency: concurrency,
+		noproxy:     noproxy,
 		db:          db,
 		dstb:        dstb,
 	}, nil
@@ -49,6 +51,10 @@ func (o *Ollama) Fetch(ctx context.Context, reference string, path string, plog 
 	repo, err := NewRepository(reference)
 	if err != nil {
 		return oci.DescriptorEmptyJSON, err
+	}
+
+	if !o.noproxy {
+		repo.EnableProxy()
 	}
 
 	desc, err := repo.Resolve(ctx, repo.Reference.Reference)

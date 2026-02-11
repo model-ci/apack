@@ -85,7 +85,6 @@ func IsInteractiveSession() bool {
 	return term.IsTerminal(int(syscall.Stdin))
 }
 
-
 // buildRepositoryManifestURL builds the URL for accessing the manifest API.
 // Format: <scheme>://<registry>/v2/<repository>/manifests/<digest_or_tag>
 // Reference: https://distribution.github.io/distribution/spec/api/#manifest

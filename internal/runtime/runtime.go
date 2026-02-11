@@ -103,7 +103,7 @@ func (r *runtime) Run(ctx context.Context, path string, models []spec.Model, par
 			fmt.Sprintf(":%d", params.Port),
 			fmt.Sprintf(":%s", "--"),
 		},
-		Descriptor: desc,
+		Desc: desc,
 	}
 
 	st.UpdateStatus(StatusCreated, st.CreateAt)
@@ -142,13 +142,17 @@ func (r *runtime) Kill(ctx context.Context, id string) error {
 		}
 
 		if st.ID == id {
-			ref = status.Annotations[layerdb.OCIAnnotationRefName]
+			ref = st.Desc.Annotations[layerdb.OCIAnnotationRefName]
 			found = true
 		}
 	}
 
 	if !found {
 		return fmt.Errorf("runtime %s not found", id)
+	}
+
+	if ref == "" {
+		return fmt.Errorf("ref is nil")
 	}
 
 	st.UpdateStatus(StatusExited, st.CreateAt)

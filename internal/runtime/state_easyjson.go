@@ -221,98 +221,8 @@ func easyjsonBd887cf1DecodeGithubComModelCiApackInternalRuntime1(in *jlexer.Lexe
 				}
 				in.Delim(']')
 			}
-		case "mediaType":
-			if in.IsNull() {
-				in.Skip()
-			} else {
-				out.MediaType = string(in.String())
-			}
-		case "digest":
-			if in.IsNull() {
-				in.Skip()
-			} else {
-				out.Digest = go_digest.Digest(in.String())
-			}
-		case "size":
-			if in.IsNull() {
-				in.Skip()
-			} else {
-				out.Size = int64(in.Int64())
-			}
-		case "urls":
-			if in.IsNull() {
-				in.Skip()
-				out.URLs = nil
-			} else {
-				in.Delim('[')
-				if out.URLs == nil {
-					if !in.IsDelim(']') {
-						out.URLs = make([]string, 0, 4)
-					} else {
-						out.URLs = []string{}
-					}
-				} else {
-					out.URLs = (out.URLs)[:0]
-				}
-				for !in.IsDelim(']') {
-					var v6 string
-					if in.IsNull() {
-						in.Skip()
-					} else {
-						v6 = string(in.String())
-					}
-					out.URLs = append(out.URLs, v6)
-					in.WantComma()
-				}
-				in.Delim(']')
-			}
-		case "annotations":
-			if in.IsNull() {
-				in.Skip()
-			} else {
-				in.Delim('{')
-				if !in.IsDelim('}') {
-					out.Annotations = make(map[string]string)
-				} else {
-					out.Annotations = nil
-				}
-				for !in.IsDelim('}') {
-					key := string(in.String())
-					in.WantColon()
-					var v7 string
-					if in.IsNull() {
-						in.Skip()
-					} else {
-						v7 = string(in.String())
-					}
-					(out.Annotations)[key] = v7
-					in.WantComma()
-				}
-				in.Delim('}')
-			}
-		case "data":
-			if in.IsNull() {
-				in.Skip()
-				out.Data = nil
-			} else {
-				out.Data = in.Bytes()
-			}
-		case "platform":
-			if in.IsNull() {
-				in.Skip()
-				out.Platform = nil
-			} else {
-				if out.Platform == nil {
-					out.Platform = new(_v1.Platform)
-				}
-				easyjsonBd887cf1DecodeGithubComOpencontainersImageSpecSpecsGoV1(in, out.Platform)
-			}
-		case "artifactType":
-			if in.IsNull() {
-				in.Skip()
-			} else {
-				out.ArtifactType = string(in.String())
-			}
+		case "Desc":
+			easyjsonBd887cf1DecodeGithubComOpencontainersImageSpecSpecsGoV1(in, &out.Desc)
 		default:
 			in.SkipRecursive()
 		}
@@ -354,11 +264,11 @@ func easyjsonBd887cf1EncodeGithubComModelCiApackInternalRuntime1(out *jwriter.Wr
 			out.RawString("null")
 		} else {
 			out.RawByte('[')
-			for v9, v10 := range in.Endpoints {
-				if v9 > 0 {
+			for v6, v7 := range in.Endpoints {
+				if v6 > 0 {
 					out.RawByte(',')
 				}
-				out.String(string(v10))
+				out.String(string(v7))
 			}
 			out.RawByte(']')
 		}
@@ -370,18 +280,169 @@ func easyjsonBd887cf1EncodeGithubComModelCiApackInternalRuntime1(out *jwriter.Wr
 			out.RawString("null")
 		} else {
 			out.RawByte('[')
-			for v11, v12 := range in.Names {
-				if v11 > 0 {
+			for v8, v9 := range in.Names {
+				if v8 > 0 {
 					out.RawByte(',')
 				}
-				out.String(string(v12))
+				out.String(string(v9))
 			}
 			out.RawByte(']')
 		}
 	}
 	{
-		const prefix string = ",\"mediaType\":"
+		const prefix string = ",\"Desc\":"
 		out.RawString(prefix)
+		easyjsonBd887cf1EncodeGithubComOpencontainersImageSpecSpecsGoV1(out, in.Desc)
+	}
+	out.RawByte('}')
+}
+
+// MarshalJSON supports json.Marshaler interface
+func (v State) MarshalJSON() ([]byte, error) {
+	w := jwriter.Writer{}
+	easyjsonBd887cf1EncodeGithubComModelCiApackInternalRuntime1(&w, v)
+	return w.Buffer.BuildBytes(), w.Error
+}
+
+// MarshalEasyJSON supports easyjson.Marshaler interface
+func (v State) MarshalEasyJSON(w *jwriter.Writer) {
+	easyjsonBd887cf1EncodeGithubComModelCiApackInternalRuntime1(w, v)
+}
+
+// UnmarshalJSON supports json.Unmarshaler interface
+func (v *State) UnmarshalJSON(data []byte) error {
+	r := jlexer.Lexer{Data: data}
+	easyjsonBd887cf1DecodeGithubComModelCiApackInternalRuntime1(&r, v)
+	return r.Error()
+}
+
+// UnmarshalEasyJSON supports easyjson.Unmarshaler interface
+func (v *State) UnmarshalEasyJSON(l *jlexer.Lexer) {
+	easyjsonBd887cf1DecodeGithubComModelCiApackInternalRuntime1(l, v)
+}
+func easyjsonBd887cf1DecodeGithubComOpencontainersImageSpecSpecsGoV1(in *jlexer.Lexer, out *_v1.Descriptor) {
+	isTopLevel := in.IsStart()
+	if in.IsNull() {
+		if isTopLevel {
+			in.Consumed()
+		}
+		in.Skip()
+		return
+	}
+	in.Delim('{')
+	for !in.IsDelim('}') {
+		key := in.UnsafeFieldName(false)
+		in.WantColon()
+		switch key {
+		case "mediaType":
+			if in.IsNull() {
+				in.Skip()
+			} else {
+				out.MediaType = string(in.String())
+			}
+		case "digest":
+			if in.IsNull() {
+				in.Skip()
+			} else {
+				out.Digest = go_digest.Digest(in.String())
+			}
+		case "size":
+			if in.IsNull() {
+				in.Skip()
+			} else {
+				out.Size = int64(in.Int64())
+			}
+		case "urls":
+			if in.IsNull() {
+				in.Skip()
+				out.URLs = nil
+			} else {
+				in.Delim('[')
+				if out.URLs == nil {
+					if !in.IsDelim(']') {
+						out.URLs = make([]string, 0, 4)
+					} else {
+						out.URLs = []string{}
+					}
+				} else {
+					out.URLs = (out.URLs)[:0]
+				}
+				for !in.IsDelim(']') {
+					var v10 string
+					if in.IsNull() {
+						in.Skip()
+					} else {
+						v10 = string(in.String())
+					}
+					out.URLs = append(out.URLs, v10)
+					in.WantComma()
+				}
+				in.Delim(']')
+			}
+		case "annotations":
+			if in.IsNull() {
+				in.Skip()
+			} else {
+				in.Delim('{')
+				if !in.IsDelim('}') {
+					out.Annotations = make(map[string]string)
+				} else {
+					out.Annotations = nil
+				}
+				for !in.IsDelim('}') {
+					key := string(in.String())
+					in.WantColon()
+					var v11 string
+					if in.IsNull() {
+						in.Skip()
+					} else {
+						v11 = string(in.String())
+					}
+					(out.Annotations)[key] = v11
+					in.WantComma()
+				}
+				in.Delim('}')
+			}
+		case "data":
+			if in.IsNull() {
+				in.Skip()
+				out.Data = nil
+			} else {
+				out.Data = in.Bytes()
+			}
+		case "platform":
+			if in.IsNull() {
+				in.Skip()
+				out.Platform = nil
+			} else {
+				if out.Platform == nil {
+					out.Platform = new(_v1.Platform)
+				}
+				easyjsonBd887cf1DecodeGithubComOpencontainersImageSpecSpecsGoV11(in, out.Platform)
+			}
+		case "artifactType":
+			if in.IsNull() {
+				in.Skip()
+			} else {
+				out.ArtifactType = string(in.String())
+			}
+		default:
+			in.SkipRecursive()
+		}
+		in.WantComma()
+	}
+	in.Delim('}')
+	if isTopLevel {
+		in.Consumed()
+	}
+}
+func easyjsonBd887cf1EncodeGithubComOpencontainersImageSpecSpecsGoV1(out *jwriter.Writer, in _v1.Descriptor) {
+	out.RawByte('{')
+	first := true
+	_ = first
+	{
+		const prefix string = ",\"mediaType\":"
+		out.RawString(prefix[1:])
 		out.String(string(in.MediaType))
 	}
 	{
@@ -435,7 +496,7 @@ func easyjsonBd887cf1EncodeGithubComModelCiApackInternalRuntime1(out *jwriter.Wr
 	if in.Platform != nil {
 		const prefix string = ",\"platform\":"
 		out.RawString(prefix)
-		easyjsonBd887cf1EncodeGithubComOpencontainersImageSpecSpecsGoV1(out, *in.Platform)
+		easyjsonBd887cf1EncodeGithubComOpencontainersImageSpecSpecsGoV11(out, *in.Platform)
 	}
 	if in.ArtifactType != "" {
 		const prefix string = ",\"artifactType\":"
@@ -444,31 +505,7 @@ func easyjsonBd887cf1EncodeGithubComModelCiApackInternalRuntime1(out *jwriter.Wr
 	}
 	out.RawByte('}')
 }
-
-// MarshalJSON supports json.Marshaler interface
-func (v State) MarshalJSON() ([]byte, error) {
-	w := jwriter.Writer{}
-	easyjsonBd887cf1EncodeGithubComModelCiApackInternalRuntime1(&w, v)
-	return w.Buffer.BuildBytes(), w.Error
-}
-
-// MarshalEasyJSON supports easyjson.Marshaler interface
-func (v State) MarshalEasyJSON(w *jwriter.Writer) {
-	easyjsonBd887cf1EncodeGithubComModelCiApackInternalRuntime1(w, v)
-}
-
-// UnmarshalJSON supports json.Unmarshaler interface
-func (v *State) UnmarshalJSON(data []byte) error {
-	r := jlexer.Lexer{Data: data}
-	easyjsonBd887cf1DecodeGithubComModelCiApackInternalRuntime1(&r, v)
-	return r.Error()
-}
-
-// UnmarshalEasyJSON supports easyjson.Unmarshaler interface
-func (v *State) UnmarshalEasyJSON(l *jlexer.Lexer) {
-	easyjsonBd887cf1DecodeGithubComModelCiApackInternalRuntime1(l, v)
-}
-func easyjsonBd887cf1DecodeGithubComOpencontainersImageSpecSpecsGoV1(in *jlexer.Lexer, out *_v1.Platform) {
+func easyjsonBd887cf1DecodeGithubComOpencontainersImageSpecSpecsGoV11(in *jlexer.Lexer, out *_v1.Platform) {
 	isTopLevel := in.IsStart()
 	if in.IsNull() {
 		if isTopLevel {
@@ -543,7 +580,7 @@ func easyjsonBd887cf1DecodeGithubComOpencontainersImageSpecSpecsGoV1(in *jlexer.
 		in.Consumed()
 	}
 }
-func easyjsonBd887cf1EncodeGithubComOpencontainersImageSpecSpecsGoV1(out *jwriter.Writer, in _v1.Platform) {
+func easyjsonBd887cf1EncodeGithubComOpencontainersImageSpecSpecsGoV11(out *jwriter.Writer, in _v1.Platform) {
 	out.RawByte('{')
 	first := true
 	_ = first

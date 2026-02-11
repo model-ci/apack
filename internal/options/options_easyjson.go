@@ -166,6 +166,24 @@ func easyjson24099d24DecodeGithubComModelCiApackInternalOptions(in *jlexer.Lexer
 				}
 				in.Delim(']')
 			}
+		case "concurrency":
+			if in.IsNull() {
+				in.Skip()
+			} else {
+				out.Concurrency = int(in.Int())
+			}
+		case "no-proxy":
+			if in.IsNull() {
+				in.Skip()
+			} else {
+				out.NoProxy = bool(in.Bool())
+			}
+		case "compress":
+			if in.IsNull() {
+				in.Skip()
+			} else {
+				out.Compress = int(in.Int())
+			}
 		default:
 			in.SkipRecursive()
 		}
@@ -374,6 +392,36 @@ func easyjson24099d24EncodeGithubComModelCiApackInternalOptions(out *jwriter.Wri
 			}
 			out.RawByte(']')
 		}
+	}
+	if in.Concurrency != 0 {
+		const prefix string = ",\"concurrency\":"
+		if first {
+			first = false
+			out.RawString(prefix[1:])
+		} else {
+			out.RawString(prefix)
+		}
+		out.Int(int(in.Concurrency))
+	}
+	if in.NoProxy {
+		const prefix string = ",\"no-proxy\":"
+		if first {
+			first = false
+			out.RawString(prefix[1:])
+		} else {
+			out.RawString(prefix)
+		}
+		out.Bool(bool(in.NoProxy))
+	}
+	if in.Compress != 0 {
+		const prefix string = ",\"compress\":"
+		if first {
+			first = false
+			out.RawString(prefix[1:])
+		} else {
+			out.RawString(prefix)
+		}
+		out.Int(int(in.Compress))
 	}
 	out.RawByte('}')
 }

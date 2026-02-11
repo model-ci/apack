@@ -18,14 +18,13 @@ type States struct {
 }
 
 type State struct {
-	oci.Descriptor
-
 	ID         string
 	ModelImage string
 	CreateAt   time.Time
 	Status     string
 	Endpoints  []string
 	Names      []string
+	Desc       oci.Descriptor
 }
 
 func (s *State) UpdateStatus(st statusType, last time.Time) {

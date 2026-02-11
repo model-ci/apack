@@ -126,7 +126,7 @@ func (l *local) Pull(ctx context.Context, remote registry.Repository, ref regist
 	if !pullProgress.CheckAllCompleted() {
 		return oci.DescriptorEmptyJSON, fmt.Errorf("failed to pull all layers")
 	}
-	
+
 	err = artifact.MarshalYAMLToPath(path)
 	if err != nil {
 		return oci.DescriptorEmptyJSON, err

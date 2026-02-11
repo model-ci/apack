@@ -39,7 +39,7 @@ type BaseAPI struct {
 func (b *BaseAPI) Init(c *config.APIConfig) {
 	b.manager = task.NewManager(3 * time.Second)
 	s, err := service.NewBaseService(c.GetDataDir(), b.manager,
-		&service.Config{Concurrency: c.Base.Opts.Concurrency, Compress: c.Base.Opts.Compress})
+		&service.Config{Concurrency: c.Base.Opts.Concurrency, NoProxy: c.Base.Opts.NoProxy, Compress: c.Base.Opts.Compress})
 	if err != nil {
 		panic(err)
 	}
@@ -235,7 +235,7 @@ func (b *BaseAPI) handleKill(w http.ResponseWriter, req *http.Request, params ht
 
 	res, err := b.service.Kill(req.Context(), kill)
 	if err != nil {
-		utils.WriteError(w, "KILL", "kill error", http.StatusInternalServerError)
+		utils.WriteError(w, "KILL", err.Error(), http.StatusInternalServerError)
 		return
 	}
 

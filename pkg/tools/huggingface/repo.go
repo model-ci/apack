@@ -19,6 +19,7 @@ import (
 type Repository interface {
 	Resolve(ctx context.Context, reference string) (distribution.Makefile, error)
 	Fetch(ctx context.Context, c distribution.Content, snappath string, pw *progress.ProgressWriter) error
+	EnableProxy()
 }
 
 type huggingFaceRepo struct {
@@ -27,6 +28,7 @@ type huggingFaceRepo struct {
 	branch   string
 	endpoint string
 	token    string
+	proxy    bool
 	argo     layerdb.Algorithm
 }
 
@@ -41,6 +43,10 @@ func NewRepository(repo, branch, endpoint, token string, argo layerdb.Algorithm)
 		token:    token,
 		argo:     argo,
 	}, nil
+}
+
+func (r *huggingFaceRepo) EnableProxy() {
+	r.proxy = true
 }
 
 func (r *huggingFaceRepo) Resolve(ctx context.Context, reference string) (distribution.Makefile, error) {
@@ -74,7 +80,13 @@ func (r *huggingFaceRepo) Fetch(ctx context.Context, c distribution.Content, sna
 		return nil
 	}
 
-	dl := transfer.NewDownloader(url, diffid, c.Size(), pw)
+	var dl *transfer.Downloader
+	if r.proxy {
+		dl = transfer.NewDownloader(url, diffid, c.Size(), pw, transfer.WithProxy())
+	} else {
+		dl = transfer.NewDownloader(url, diffid, c.Size(), pw)
+	}
+
 	if err := dl.Start(ctx); err != nil {
 		return fmt.Errorf("failed to download file: %w", err)
 	}

@@ -31,13 +31,14 @@ type Huggingface struct {
 	username    string
 	token       string
 	concurrency int
+	noproxy     bool
 	endpoint    string
 	db          layerdb.DB
 	dstb        distribution.Distribution
 	client      *http.Client
 }
 
-func NewHuggingface(user, password string, concurrency int, db layerdb.DB, dstb distribution.Distribution) (tools.Tool, error) {
+func NewHuggingface(user, password string, concurrency int, noproxy bool, db layerdb.DB, dstb distribution.Distribution) (tools.Tool, error) {
 	client := &http.Client{
 		Timeout: 600 * time.Second,
 	}
@@ -45,6 +46,7 @@ func NewHuggingface(user, password string, concurrency int, db layerdb.DB, dstb 
 		username:    user,
 		token:       password,
 		concurrency: concurrency,
+		noproxy:     noproxy,
 		db:          db,
 		dstb:        dstb,
 		client:      client,
@@ -66,6 +68,10 @@ func (hf *Huggingface) Fetch(ctx context.Context, reference string, path string,
 	remote, err := NewRepository(repo, branch, hf.endpoint, hf.token, layerdb.Gzip)
 	if err != nil {
 		return oci.DescriptorEmptyJSON, err
+	}
+
+	if !hf.noproxy {
+		remote.EnableProxy()
 	}
 
 	mf, err := remote.Resolve(ctx, reference)

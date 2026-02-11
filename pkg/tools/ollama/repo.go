@@ -23,10 +23,12 @@ import (
 type Repository interface {
 	Resolve(ctx context.Context, tag string) (oci.Descriptor, error)
 	Fetch(ctx context.Context, target oci.Descriptor, diffid digest.Digest, snappath string, pw *progress.ProgressWriter) (io.ReadCloser, error)
+	EnableProxy()
 }
 
 type ollamaRepo struct {
 	*remote.Repository
+	proxy bool
 }
 
 func NewRepository(reference string) (*ollamaRepo, error) {
@@ -37,6 +39,10 @@ func NewRepository(reference string) (*ollamaRepo, error) {
 	return &ollamaRepo{
 		Repository: repo,
 	}, nil
+}
+
+func (o *ollamaRepo) EnableProxy() {
+	o.proxy = true
 }
 
 func (o *ollamaRepo) Resolve(ctx context.Context, tag string) (oci.Descriptor, error) {
@@ -117,7 +123,13 @@ func (o *ollamaRepo) Fetch(ctx context.Context, target oci.Descriptor, diffid di
 		return os.Open(snapdiff)
 	}
 
-	dl := transfer.NewDownloader(finalURL, snapdiff, target.Size, pw)
+	var dl *transfer.Downloader
+	if o.proxy {
+		dl = transfer.NewDownloader(finalURL, snapdiff, target.Size, pw, transfer.WithProxy())
+	} else {
+		dl = transfer.NewDownloader(finalURL, snapdiff, target.Size, pw)
+	}
+
 	if err := dl.Start(ctx); err != nil {
 		return nil, fmt.Errorf("failed to download file: %w", err)
 	}

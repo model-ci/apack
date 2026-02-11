@@ -209,6 +209,12 @@ func easyjson6601e8cdDecodeGithubComModelCiApackInternalTypes1(in *jlexer.Lexer,
 			} else {
 				out.Embeddings = bool(in.Bool())
 			}
+		case "Host":
+			if in.IsNull() {
+				in.Skip()
+			} else {
+				out.Host = string(in.String())
+			}
 		case "Refer":
 			if in.IsNull() {
 				in.Skip()
@@ -359,6 +365,11 @@ func easyjson6601e8cdEncodeGithubComModelCiApackInternalTypes1(out *jwriter.Writ
 		const prefix string = ",\"Embeddings\":"
 		out.RawString(prefix)
 		out.Bool(bool(in.Embeddings))
+	}
+	{
+		const prefix string = ",\"Host\":"
+		out.RawString(prefix)
+		out.String(string(in.Host))
 	}
 	{
 		const prefix string = ",\"Refer\":"
@@ -584,6 +595,12 @@ func easyjson6601e8cdDecodeGithubComModelCiApackInternalTypes2(in *jlexer.Lexer,
 			} else {
 				out.Embeddings = bool(in.Bool())
 			}
+		case "Host":
+			if in.IsNull() {
+				in.Skip()
+			} else {
+				out.Host = string(in.String())
+			}
 		case "Refer":
 			if in.IsNull() {
 				in.Skip()
@@ -658,6 +675,11 @@ func easyjson6601e8cdEncodeGithubComModelCiApackInternalTypes2(out *jwriter.Writ
 		const prefix string = ",\"Embeddings\":"
 		out.RawString(prefix)
 		out.Bool(bool(in.Embeddings))
+	}
+	{
+		const prefix string = ",\"Host\":"
+		out.RawString(prefix)
+		out.String(string(in.Host))
 	}
 	{
 		const prefix string = ",\"Refer\":"

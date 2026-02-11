@@ -4,6 +4,7 @@ import "github.com/model-ci/apack/pkg/layerdb"
 
 type Config struct {
 	Concurrency int
+	NoProxy     bool
 	Compress    int
 }
 
