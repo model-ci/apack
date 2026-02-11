@@ -5,20 +5,23 @@ This document records all significant changes to the apack project.
 Format based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project follows [Semantic Versioning](https://semver.org/).
 
-## [Unreleased]
-
-### 0.0.2 In Progress...
+## [0.0.2] - 2026-02-11
+### Added
 - Support for various cloud imports including Ollama, huggingface
-- Support for save, load and other offline package export/import functions
-- Multi-language SDKs (Python, JavaScript, Java)
-- More inference engine support (TensorRT, OpenVINO)
+- Supports resume download and concurrent download in segments
+- Supports global layer sharing and content addressing
+- Remove the llamafile engine and replace it with llama.cpp as the default inference engine
+- Multi-model management that supports process-level isolation
+- Supports tag and export commands
+- Supports Go SDK
+- Supports running with specified model parameters
 
 ## [0.0.1] - 2025-12-31
 
 ### Added
 - **Initial Release**: apack cloud-native AI model containerization tool
 - **Model Packaging**: Support for packaging AI models as OCI-compatible images
-- **Built-in Inference Engine**: Integrated llama.cpp inference engine, supporting GGUF format
+- **Built-in Inference Engine**: Integrated llamafile inference engine, supporting GGUF format
 - **CLI Tool**: Complete command-line toolset
   - `apack gen` - Automatically generate Apackfile configuration
   - `apack build` - Build model images
@@ -34,11 +37,6 @@ and this project follows [Semantic Versioning](https://semver.org/).
   - Runtime management API
   - Inference API (OpenAI compatible)
   - System monitoring API
-- **System Monitoring**: Real-time performance monitoring and health checks
-- **Security Features**:
-  - API authentication (Bearer Token, API Key)
-  - CORS support
-  - TLS/SSL support
 - **Multi-platform Support**:
   - Linux (AMD64, ARM64)
   - macOS (Intel, Apple Silicon)
@@ -46,11 +44,10 @@ and this project follows [Semantic Versioning](https://semver.org/).
 
 ### Supported Features
 - **Model Formats**: GGUF (primary support)
-- **Inference Engines**: llama.cpp/llamafile
+- **Inference Engines**: llamafile
 - **Image Registries**: Docker Hub, private registries
 - **Runtime**: Local runtime, no Docker dependency required
 - **Configuration Management**: Declarative Apackfile configuration
-- **Resource Management**: CPU, memory, GPU resource control
 - **Network Configuration**: Custom ports, host binding
 - **Log Management**: Structured log output
 
